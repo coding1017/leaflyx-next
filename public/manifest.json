@@ -1,0 +1,31 @@
+{
+  "name": "Leaflyx",
+  "short_name": "Leaflyx",
+  "description": "Premium THCA goods — modern storefront with lab-tested potency and fast delivery.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b3b2b",
+  "theme_color": "#d4af37",
+  "icons": [
+    {
+      "src": "/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Node
+node_modules
+
+# Next.js build output
+.next
+
+# Environment variables (never commit)
+.env
+.env.local
+.env.*
+
+# OS junk
+.DS_Store
+
+# Prisma generated
+/generated/prisma

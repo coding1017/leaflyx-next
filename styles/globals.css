@@ -1,0 +1,654 @@
+/* app/globals.css */
+
+@import "react-day-picker/dist/style.css";
+
+/* ----------------------------
+   Tailwind layers
+----------------------------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ----------------------------
+   Base + brand tokens
+----------------------------- */
+:root {
+  --brand-green: #0b3b2b;
+  --brand-gold:  #d4af37;
+  --header-gradient: linear-gradient(90deg, #a78bfa, #f472b6, #f59e0b);
+
+  /* Tile/frame opts (used by .frame-gold) */
+  --tile-frame-w: 12px;
+  --tile-radius: 24px;          /* ~ rounded-3xl */
+  --tile-shadow1: 0 0 0 6px rgba(212,175,55,.30);
+  --tile-shadow2: 0 18px 56px rgba(212,175,55,.20);
+
+  /* halo spacing + bottom trim */
+  --halo-pad: 18px;  /* matches the -18px pad used by the halo */
+  --halo-cap: 26px;  /* not used by this method, but keep if you use other helpers */
+}
+
+body { @apply bg-neutral-950 text-neutral-100; }
+
+/* ----------------------------
+   Buttons
+----------------------------- */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-2xl font-medium transition;
+  background: var(--brand-gold);
+  color: #111827;
+  border: 1px solid rgba(255, 215, 0, 0.55);           /* subtle edge */
+  box-shadow:
+    0 8px 20px rgba(212,175,55,0.28),                  /* gold lift */
+    0 2px 6px rgba(0,0,0,0.25),                        /* base lift */
+    inset 0 1px 0 rgba(255,255,255,0.35);              /* soft top highlight */
+}
+.btn:hover {
+  filter: brightness(0.98);
+  transform: translateY(-0.5px);
+  box-shadow:
+    0 10px 24px rgba(212,175,55,0.34),
+    0 3px 8px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.btn-outline {
+  @apply inline-flex items-center justify-center px-4 py-2 rounded-2xl font-medium border transition;
+  color: #f3f4f6;                                      /* brighter text */
+  border-color: rgba(255,255,255,0.22);
+  background: rgba(17,17,17,0.42);                     /* needs alpha for Safari blur */
+  -webkit-backdrop-filter: saturate(120%) blur(8px);
+          backdrop-filter: saturate(120%) blur(8px);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+.btn-outline:hover {
+  background: rgba(17,17,17,0.6);
+  border-color: rgba(255,255,255,0.32);
+}
+
+.btn:focus-visible,
+.btn-outline:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(212,175,55,0.45),
+    0 8px 20px rgba(0,0,0,0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn-outline { transition: none; }
+}
+
+
+
+/* ----------------------------
+   Utilities
+----------------------------- */
+@layer utilities {
+  .gradient-text {
+    background-image: var(--header-gradient);
+    -webkit-background-clip: text;
+            background-clip: text;
+    color: transparent;
+  }
+}
+
+/* ----------------------------
+   Optional site backdrop
+----------------------------- */
+.site-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 80% at 20% 10%, rgba(212,175,55,0.20), transparent 65%),
+    radial-gradient(70% 70% at 80% 20%, rgba(16,185,129,0.20), transparent 65%),
+    #1a1a1a;
+}
+.site-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(243,193,30,0.45),
+    rgba(21,131,63,0.35),
+    rgba(244,192,20,0.45)
+  );
+  filter: blur(80px);
+  opacity: 0.50;
+  animation: siteSpin 28s linear infinite;
+}
+@keyframes siteSpin { to { transform: rotate(360deg); } }
+
+/* ----------------------------
+   Product IMAGE halo
+----------------------------- */
+
+/* Neutral shell (no border/ring) */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* NEW: a window that lets the halo breathe on top/sides,
+   but clips it at the bottom so it never spills onto thumbnails */
+.halo-window {
+  position: relative;
+  border-radius: 1.5rem;            /* ~ rounded-3xl / rounded-2xl blend */
+  overflow: hidden;                 /* this is the magic: clip the pseudo below */
+padding: var(--halo-pad);  /* even halo on all sides */
+  background: transparent;
+}
+/* space below the halo so thumbnails never touch it */
+.halo-gap { margin-top: var(--halo-pad); }
+
+
+/* Container that emits the gold aura via ::before */
+.halo-wrap {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Default gold aura frame */
+.halo-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -18px;                 /* pushes glow outside the card */
+  border-radius: 1.5rem;        /* keep rounded aura */
+  background: conic-gradient(
+    from 0deg,
+    rgba(255,215,0,0.95),
+    rgba(255,223,70,0.85),
+    rgba(255,215,0,0.95)
+  );
+  filter: blur(48px);
+  opacity: 1;
+  pointer-events: none;
+  z-index: 0;
+  animation: haloSpin 14s linear infinite;
+}
+@keyframes haloSpin { to { transform: rotate(360deg); } }
+
+/* Intensity helpers */
+.aura-soft::before   { filter: blur(22px); opacity: .5; }
+.aura-strong::before { filter: blur(34px); opacity: .95; }
+
+/* (You can keep these older helpers around if you use them elsewhere) */
+.halo-top-sides::before { inset: -18px -18px 0 -18px; border-radius: 1.5rem; }
+.halo-clip::before {
+  --halo-cut: 36px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--halo-cut)),
+    transparent 100%
+  );
+          mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--halo-cut)),
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+}
+
+/* White “mat” behind the image */
+.img-card {
+  position: relative;
+  z-index: 1;
+  background: #fff;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.img-card > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: inherit;
+}
+
+/* ----------------------------
+   Hover-only gold glow for cards (on <article>)
+----------------------------- */
+.aura-gold {
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.aura-gold:hover,
+.aura-gold:focus-within {
+  box-shadow: 0 0 32px rgba(212,175,55,0.55), 0 0 64px rgba(212,175,55,0.35);
+  transform: scale(1.01);
+}
+@media (prefers-reduced-motion: reduce) {
+  .aura-gold { transition: none; }
+}
+
+/* ----------------------------
+   Optional modal pop animation
+----------------------------- */
+@keyframes pop {
+  0%   { transform: scale(.96); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.modal-pop { animation: pop .16s ease-out both; }
+
+/* ----------------------------
+   Card/ring hard-resets for grid
+----------------------------- */
+:where(div,li,section,article,a):has(> [data-card]),
+:where(div,li,section,article,a):has(> * > [data-card]) {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+[data-card] {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+[data-card]::before,
+[data-card]::after { content: none !important; }
+
+/* ----------------------------
+   Optional framed style (if used)
+----------------------------- */
+.frame-gold {
+  position: relative;
+  border-radius: var(--tile-radius);
+  border: var(--tile-frame-w) solid var(--brand-gold);
+  box-shadow: var(--tile-shadow1), var(--tile-shadow2);
+  background: transparent;
+}
+.frame-inner {
+  background: #fff;
+  border-radius: calc(var(--tile-radius) - 8px);
+  padding: 12px;
+}
+
+/* ----------------------------
+   Badge gradient text
+----------------------------- */
+.badge-text-gold {
+  background-image: linear-gradient(90deg, #d4af37, #ffe680);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+.badge-text-lime {
+  background-image: linear-gradient(90deg, #a3e635, #facc15, #fde047);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}
+/* Make halo pseudo-element inherit the rounded shape and stay soft */
+.halo-wrap.rounded-2xl::before { border-radius: 1rem; filter: blur(18px); }
+
+/* Ensure the bottom is trimmed so glow never hits the text (you already have halo-clip; this just enforces the cut) */
+.halo-clip::before {
+  --halo-cut: 3x;
+  -webkit-mask-image: linear-gradient(to bottom,#000 0,#000 calc(100% - var(--halo-cut)),transparent 100%);
+          mask-image: linear-gradient(to bottom,#000 0,#000 calc(100% - var(--halo-cut)),transparent 100%);
+}
+/* Ensure the halo pseudo-element inherits rounding */
+.halo-wrap::before { border-radius: inherit; }
+
+/* Clip the bottom of the halo using the --halo-cut var (Safari + others) */
+.halo-clip::before {
+  -webkit-mask-image: linear-gradient(to bottom,#000 0,#000 calc(100% - var(--halo-cut, 0px)),transparent 100%);
+          mask-image: linear-gradient(to bottom,#000 0,#000 calc(100% - var(--halo-cut, 0px)),transparent 100%);
+}
+
+/* Give the halo a soft edge (optional, matches your detail vibe) */
+.halo-wrap.rounded-2xl::before { filter: blur(22px); }
+/* Clamp the halo's bottom so it never reaches the description */
+.halo-wrap.halo-clip::before {
+  border-radius: inherit; /* keep rounded glow */
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--halo-cut, 34px)),
+    transparent 100%
+  );
+          mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 calc(100% - var(--halo-cut, 34px)),
+    transparent 100%
+  );
+}
+
+/* Make sure the image sits above the halo glow */
+.halo-wrap .img-card { position: relative; z-index: 1; }
+/* === Grid-only: thinner halo look ======================================== */
+.halo-window.thin { --halo-pad: 12px; }                /* spacing around image (was 18px) */
+.halo-window.thin .halo-wrap::before { inset: -12px; } /* how far the glow extends (was -18px) */
+.halo-window.thin .halo-wrap.rounded-2xl::before { filter: blur(18px); } /* thinner/less spread */
+/* app/globals.css */
+
+/* Gradient text utility (lime → green, same as badges/header) */
+.gradient-text {
+  background: linear-gradient(90deg, #bef264, #22c55e); /* lime-300 → green-500 */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+/* Gradient text (lime → green) */
+.gradient-text {
+  background: linear-gradient(90deg, #bef264, #22c55e);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+/* Hide spin buttons on number inputs */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.btn-gold {
+  background-color: var(--brand-gold);
+  color: black;
+}
+.btn-gold:hover {
+  opacity: 0.9;
+}
+/* --- Cart glow pulse animation --- */
+@keyframes pulse-gold {
+  0% {
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25),
+                0 0 24px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(212, 175, 55, 0.45),
+                0 0 44px rgba(212, 175, 55, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.25),
+                0 0 24px rgba(212, 175, 55, 0.2);
+  }
+}
+
+.pulse-gold {
+  animation: pulse-gold 2.8s ease-in-out infinite;
+}
+/* ----------------------------
+   Animated gradient shimmer
+----------------------------- */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-120%) translateY(-120%);
+  }
+  100% {
+    transform: translateX(120%) translateY(120%);
+  }
+}
+
+.animate-shimmer {
+  background-size: 200% 200%;
+  animation: shimmer 4s ease-in-out infinite;
+}
+/* Gentle shimmer for text backgrounds (doesn't move the element) */
+@keyframes shimmerBg {
+  0%   { background-position:   0% 0%; }
+  100% { background-position: 200% 100%; }
+}
+
+.animate-shimmer-bg {
+  background-size: 200% 200%;
+  animation: shimmerBg 12s linear infinite;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer-bg { animation: none; }
+}
+/* --- COA hero carousel refined: continuous crossfade --- */
+@keyframes slideFade {
+  25%, 25%   { opacity: 1; }   /* fully visible */
+  33%, 100% { opacity: 0; }   /* fade out while next fades in */
+}
+
+.slide {
+  opacity: 0;
+  animation-name: slideFade;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+
+/* --- Indicator dots --- */
+@keyframes dotActive {
+  0%, 28% {
+    background: var(--brand-gold);
+    box-shadow: 0 0 6px rgba(212,175,55,0.5);
+    transform: scale(1.1);
+  }
+  32%, 100% {
+    background: rgba(212,175,55,0.25);
+    box-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.dot {
+  width: 0.5rem;  /* smaller dot */
+  height: 0.5rem;
+  border-radius: 9999px;
+  animation-name: dotActive;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* --- Accessibility: no animation for reduced motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .slide, .dot { animation: none !important; opacity: 1 !important; }
+}
+
+/* -----------------------------------------
+   Stronger breathing gold haze (more visible)
+----------------------------------------- */
+@keyframes strongGoldGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(212,175,55,0.5),
+      0 0 22px rgba(212,175,55,0.4),
+      0 0 45px rgba(212,175,55,0.35);
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow:
+      0 0 16px rgba(212,175,55,0.95),
+      0 0 36px rgba(212,175,55,0.85),
+      0 0 72px rgba(212,175,55,0.75);
+    filter: brightness(1.2);
+  }
+}
+
+.animate-strongGoldGlow {
+  animation: strongGoldGlow 8s ease-in-out infinite;
+}
+
+/* -----------------------------------------
+   Synced gold pulse for H1 + subtitle
+----------------------------------------- */
+
+/* Stronger, slower version for the H1 */
+@keyframes heroGoldPulse {
+  0%, 100% {
+    text-shadow:
+      0 0 14px rgba(212,175,55,0.6),
+      0 0 36px rgba(212,175,55,0.5),
+      0 0 80px rgba(212,175,55,0.4);
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow:
+      0 0 22px rgba(212,175,55,0.95),
+      0 0 48px rgba(212,175,55,0.85),
+      0 0 120px rgba(212,175,55,0.75);
+    filter: brightness(1.25);
+  }
+}
+
+.animate-heroGoldPulse {
+  animation: heroGoldPulse 8s ease-in-out infinite;
+}
+
+/* Keep subtitle on same cycle, but slightly less intense */
+@keyframes strongGoldGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(212,175,55,0.45),
+      0 0 28px rgba(212,175,55,0.35),
+      0 0 56px rgba(212,175,55,0.3);
+    filter: brightness(1);
+  }
+  50% {
+    text-shadow:
+      0 0 16px rgba(212,175,55,0.9),
+      0 0 38px rgba(212,175,55,0.8),
+      0 0 90px rgba(212,175,55,0.7);
+    filter: brightness(1.2);
+  }
+}
+
+.animate-strongGoldGlow {
+  animation: strongGoldGlow 8s ease-in-out infinite;
+}
+@keyframes leaflyxRestockPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 28px rgba(212,175,55,0.30),
+      0 0 70px rgba(16,185,129,0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(212,175,55,0.45),
+      0 0 92px rgba(16,185,129,0.26);
+  }
+}
+
+.restock-pulse {
+  animation: leaflyxRestockPulse 2.8s ease-in-out infinite;
+}
+
+/* Gold glow for placeholder text only */
+.placeholder-gold-glow::placeholder {
+  color: var(--brand-gold);
+  opacity: 0.7;
+  text-shadow:
+    0 0 6px rgba(212,175,55,0.55),
+    0 0 14px rgba(212,175,55,0.35);
+}
+@keyframes faqChipGlowPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 3px rgba(212,175,55,0.12),
+      0 0 18px rgba(212,175,55,0.16);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(212,175,55,0.18),
+      0 0 26px rgba(212,175,55,0.22);
+    filter: brightness(1.04);
+  }
+}
+
+.animate-faqChipGlowPulse {
+  animation: faqChipGlowPulse 2.8s ease-in-out infinite;
+}
+/* ---------------------------------- */
+/* Leaflyx DayPicker gold accents     */
+/* ---------------------------------- */
+
+.rdp-leaflyx .rdp-day_selected,
+.rdp-leaflyx .rdp-day_selected:focus-visible,
+.rdp-leaflyx .rdp-day_selected:hover {
+  background: var(--brand-gold);
+  color: #111827; /* near-black text */
+  box-shadow:
+    0 0 0 2px rgba(212, 175, 55, 0.45),
+    0 0 18px rgba(212, 175, 55, 0.55),
+    0 0 36px rgba(212, 175, 55, 0.35);
+}
+
+.rdp-leaflyx .rdp-day_today:not(.rdp-day_selected) {
+  border: 1px solid rgba(212, 175, 55, 0.45);
+}
+
+.rdp-leaflyx .rdp-day:hover:not(.rdp-day_selected) {
+  background: rgba(212, 175, 55, 0.12);
+}
+/* ---------------------------------- */
+/* Leaflyx DayPicker theme overrides  */
+/* ---------------------------------- */
+
+.rdp-leaflyx {
+  /* Force DayPicker's built-in accent color to your token */
+  --rdp-accent-color: var(--brand-gold);
+  --rdp-accent-background-color: rgba(212, 175, 55, 0.18);
+}
+
+/* Kill the default blue focus ring and replace with Leaflyx gold */
+.rdp-leaflyx .rdp-button:focus,
+.rdp-leaflyx .rdp-button:focus-visible {
+  outline: none !important;
+  box-shadow:
+    0 0 0 2px rgba(212, 175, 55, 0.45),
+    0 0 18px rgba(212, 175, 55, 0.45),
+    0 0 36px rgba(212, 175, 55, 0.30);
+}
+
+/* Selected day: exact token gold + glow */
+.rdp-leaflyx .rdp-day_selected,
+.rdp-leaflyx .rdp-day_selected:hover,
+.rdp-leaflyx .rdp-day_selected:focus-visible {
+  background: var(--brand-gold) !important;
+  color: #111827 !important;
+  box-shadow:
+    0 0 0 2px rgba(212, 175, 55, 0.55),
+    0 0 18px rgba(212, 175, 55, 0.55),
+    0 0 36px rgba(212, 175, 55, 0.35);
+}
+
+/* Today (when not selected): remove default blue and use gold */
+.rdp-leaflyx .rdp-day_today:not(.rdp-day_selected) {
+  color: var(--brand-gold) !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+}
+
+/* Hover for non-selected days */
+.rdp-leaflyx .rdp-day:hover:not(.rdp-day_selected) {
+  background: rgba(212, 175, 55, 0.12) !important;
+}
+ @keyframes leaflyxGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(212,175,55,0.22),
+                0 0 28px rgba(212,175,55,0.22),
+                0 18px 55px rgba(0,0,0,0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(212,175,55,0.30),
+                0 0 44px rgba(212,175,55,0.34),
+                0 18px 55px rgba(0,0,0,0.45);
+  }
+}

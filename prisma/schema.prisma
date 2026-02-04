@@ -1,0 +1,269 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Review {
+  id               Int      @id @default(autoincrement())
+  productSlug      String
+  rating           Int
+  title            String?
+  body             String
+  authorName       String
+  verifiedPurchase Boolean  @default(false)
+  helpfulCount     Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  // moderation + light abuse controls
+  status    ReviewStatus @default(APPROVED)
+  ipHash    String?
+  userAgent String?
+
+  flags ReviewFlag[]
+
+  @@index([productSlug])
+  @@index([productSlug, createdAt])
+  @@index([productSlug, rating])
+  @@index([productSlug, helpfulCount])
+}
+
+model ReviewFlag {
+  id        Int      @id @default(autoincrement())
+  reviewId  Int
+  reason    String
+  details   String?
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+model BackInStockRequest {
+  id        String   @id @default(cuid())
+  productId String
+  variant   String? // null = "any size"
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([productId, variant, email])
+}
+
+model Inventory {
+  id        String   @id @default(cuid())
+  productId String
+  variant   String?
+  qty       Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, variant], name: "productId_variant")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email String  @unique
+  name  String?
+  image String?
+  birthday  DateTime? 
+
+  // Credentials auth (store hash only — NEVER plaintext)
+  passwordHash String?
+
+  role UserRole @default(USER)
+
+  // Private profile fields (private by default)
+  phone       String?
+  address1    String?
+  address2    String?
+  city        String?
+  state       String?
+  postal      String?
+  country     String?
+  socialsJson String? // JSON string: { instagram, x, ... }
+
+  // Public profile (explicit opt-in)
+  handle               String? @unique
+  publicProfileEnabled Boolean @default(false)
+  publicBio            String?
+
+  // Privacy / analytics consent (explicit opt-in)
+  analyticsOptIn Boolean @default(false)
+
+  sessions            Session[]
+  accounts            Account[]
+  orders              Order[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Orders (private — never publicly exposed)
+enum OrderStatus {
+  DRAFT
+  PAID
+  FULFILLED
+  CANCELED
+  REFUNDED
+}
+
+model Order {
+  id        String      @id @default(cuid())
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  status    OrderStatus @default(PAID)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  totalCents Int    @default(0)
+  currency   String @default("USD")
+
+  items OrderItem[]
+
+  // reorder tracking
+  sourceOrderId String?
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId  String
+  variant    String?
+  name       String
+  qty        Int
+  priceCents Int
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  ipHash    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model DiscountCode {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  description     String?
+  ambassadorLabel String?  // e.g. "LuisA1" or influencer name
+  isActive        Boolean  @default(true)
+
+  // discount definition
+  type            DiscountType
+  percentOff      Int?     // 1..50 (server clamps <= 50)
+  amountOffCents  Int?     // e.g. 500 = $5 off
+
+  // optional constraints
+  minSubtotalCents Int?    // require cart subtotal >= this
+  maxUses          Int?    // total uses allowed (null = unlimited)
+  usesCount        Int     @default(0) // maintained server-side
+  expiresAt        DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  redemptions      DiscountRedemption[]
+}
+
+enum DiscountType {
+  PERCENT
+  AMOUNT
+}
+
+model DiscountRedemption {
+  id             String   @id @default(cuid())
+  discountCodeId String
+  codeSnapshot   String   // store code as used (in case code changes later)
+
+  // who used it (optional, but helpful)
+  userId         String?
+  userEmail      String?
+
+  // purchase snapshot
+  subtotalCents  Int
+  discountCents  Int
+  totalCents     Int
+  itemsJson      Json      // cart items snapshot
+
+  createdAt      DateTime  @default(now())
+
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id])
+
+  @@index([discountCodeId, createdAt])
+}
+
+model Subscriber {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  status         String   @default("ACTIVE") // ACTIVE | UNSUBSCRIBED
+  source         String?  // e.g. "cart_notice_modal"
+  tags           String?  // comma-separated tags if you want
+  token          String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  unsubscribedAt DateTime?
+}
+
