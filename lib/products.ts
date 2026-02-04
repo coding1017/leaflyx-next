@@ -2,112 +2,14 @@
 
 import type { StaticImageData } from "next/image";
 
-/* =========================
-   Static image imports
-   ========================= */
-
-// Flower / Smalls / Shared
-import iceCreamCake1 from "@/public/images/products/ice-cream-cake-1.jpg";
-import chocolateMintz from "@/public/images/products/chocolate-mintz.png";
-import cherryLemonade06 from "@/public/images/products/cherry-lemonade-06.jpg";
-import weddingCake from "@/public/images/products/wedding-cake.png";
-import modifiedGrapes from "@/public/images/products/modified-grapes.png";
-
-import jellysBreath    from "public/images/products/jellys-breath.jpg";
-import jellysBreath2   from "public/images/products/jellys-breath2.jpg";
-import jellysBreath3   from "public/images/products/jellys-breath3.jpg";
-
-import butterface from "@/public/images/products/butterface.jpg";
-import butterface2 from "@/public/images/products/butterface2.jpg";
-import butterface3 from "@/public/images/products/butterface3.jpg";
-
-import mimosa from "@/public/images/products/mimosa.jpg";
-import mimosa2 from "@/public/images/products/mimosa2.jpg";
-import mimosa3 from "@/public/images/products/mimosa3.jpg";
-
-// Edibles
-import brownButterBliss from "@/public/images/products/brown-butter-bliss.jpg";
-import brownButterBliss2 from "@/public/images/products/brown-butter-bliss2.jpg";
-
-import peppermintBrownie from "@/public/images/products/peppermint-brownie.jpg";
-import peppermintBrownie2 from "@/public/images/products/peppermint-brownie2.jpg";
-import peppermintBrownie3 from "@/public/images/products/peppermint-brownie3.jpg";
-import peppermintBrownie4 from "@/public/images/products/peppermint-brownie4.jpg";
-
-import stoutBrownie from "@/public/images/products/stout-brownie.jpg";
-import stoutBrownie2 from "@/public/images/products/stout-brownie2.jpg";
-import stoutBrownie3 from "@/public/images/products/stout-brownie3.jpg";
-import stoutBrownie4 from "@/public/images/products/stout-brownie4.jpg";
-
-import fruitSyrupRasberry from "@/public/images/products/fruit-syrup-rasberry.jpg";
-import fruitSyrupRasberry2 from "@/public/images/products/fruit-syrup-rasberry2.jpg";
-import fruitSyrupRasberry3 from "@/public/images/products/fruit-syrup-rasberry3.jpg";
-
-import honeyHibiscus from "@/public/images/products/honey-hibiscus.jpg";
-import honeyHibiscus2 from "@/public/images/products/honey-hibiscus2.jpg";
-import honeyHibiscus3 from "@/public/images/products/honey-hibiscus3.jpg";
-
-import berryFruitGummy from "@/public/images/products/berry-fruit-gummy.jpg";
-import berryFruitGummy2 from "@/public/images/products/berry-fruit-gummy2.jpg";
-import berryFruitGummy3 from "@/public/images/products/berry-fruit-gummy3.jpg";
-
-import chocolateBrownie from "@/public/images/products/chocolate-brownie.jpg";
-import chocolateBrownie2 from "@/public/images/products/chocolate-brownie2.jpg";
-import chocolateBrownie3 from "@/public/images/products/chocolate-brownie3.jpg";
-
-import frenchVanilla from "@/public/images/products/french-vanilla.jpg";
-import frenchVanilla2 from "@/public/images/products/french-vanilla2.jpg";
-import frenchVanilla3 from "@/public/images/products/french-vanilla3.jpg";
-import frenchVanilla4 from "@/public/images/products/french-vanilla4.jpg";
-
-import sourPineapple from "@/public/images/products/sour-pineapple-fruit-gummy.jpg";
-import sourPineapple2 from "@/public/images/products/sour-pineapple-fruit-gummy2.jpg";
-import sourPineapple3 from "@/public/images/products/sour-pineapple-fruit-gummy3.jpg";
-import sourPineapple4 from "@/public/images/products/sour-pineapple-fruit-gummy4.jpg";
-
-import muddyBuddy from "@/public/images/products/muddy-buddy.jpg";
-import muddyBuddy2 from "@/public/images/products/muddy-buddy2.jpg";
-import muddyBuddy3 from "@/public/images/products/muddy-buddy3.jpg";
-import muddyBuddy4 from "@/public/images/products/muddy-buddy4.jpg";
-
-// Concentrates
-import danteInferno from "@/public/images/products/dante-inferno.jpg";
-import danteInferno2 from "@/public/images/products/dante-inferno2.jpg";
-
-import blackIce from "@/public/images/products/black-ice.jpg";
-import blackIce2 from "@/public/images/products/black-ice2.jpg";
-
-import brickleberry from "@/public/images/products/brickleberry.jpg";
-import brickleberry2 from "@/public/images/products/brickleberry2.jpg";
-import brickleberry3 from "@/public/images/products/brickleberry3.jpg";
-import brickleberry4 from "@/public/images/products/brickleberry4.jpg";
-import brickleberry5 from "@/public/images/products/brickleberry5.jpg";
-import brickleberry6 from "@/public/images/products/brickleberry6.jpg";
-import brickleberry7 from "@/public/images/products/brickleberry7.jpg";
-
-import feijoa from "@/public/images/products/feijoa.jpg";
-import feijoa2 from "@/public/images/products/feijoa2.jpg";
-import feijoa3 from "@/public/images/products/feijoa3.jpg";
-import feijoa4 from "@/public/images/products/feijoa4.jpg";
-import feijoa5 from "@/public/images/products/feijoa5.jpg";
-import feijoa6 from "@/public/images/products/feijoa6.jpg";
-import feijoa7 from "@/public/images/products/feijoa7.jpg";
-
-import honeyDonut from "@/public/images/products/honey-donut.jpg";
-import honeyDonut2 from "@/public/images/products/honey-donut2.jpg";
-import honeyDonut3 from "@/public/images/products/honey-donut3.jpg";
-import honeyDonut4 from "@/public/images/products/honey-donut4.jpg";
-import honeyDonut5 from "@/public/images/products/honey-donut5.jpg";
-import honeyDonut6 from "@/public/images/products/honey-donut6.jpg";
-import honeyDonut7 from "@/public/images/products/honey-donut7.jpg";
-
-import papayaJuice from "@/public/images/products/papaya-juice.jpg";
-import papayaJuice2 from "@/public/images/products/papaya-juice2.jpg";
-import papayaJuice3 from "@/public/images/products/papaya-juice3.jpg";
-
-/* =========================
-   Types
-   ========================= */
+/**
+ * IMPORTANT (Vercel-safe):
+ * - Do NOT import from /public as modules (e.g. "@/public/...")
+ * - Use string paths that map to files inside /public
+ *   Example: public/images/products/foo.jpg  ->  "/images/products/foo.jpg"
+ *
+ * This avoids Linux/Vercel webpack "Module not found" errors.
+ */
 
 export type Variant = {
   id: string; // "1g", "3.5g"
@@ -135,7 +37,7 @@ export type Product = {
     | "Merch"
     | "Misc"
     | "Smalls";
-  /** New: stackable filtering facets like "indoor", "organic", "cookies", "gummies", etc. */
+  /** stackable filtering facets like "indoor", "organic", "cookies", "gummies", etc. */
   subcategories?: string[];
   price: number;
   potency: string;
@@ -147,6 +49,111 @@ export type Product = {
   stock?: number;
   active?: boolean;
 };
+
+/* =========================
+   Image paths (public URLs)
+   ========================= */
+
+const IMG = {
+  // Flower / Smalls / Shared
+  iceCreamCake1: "/images/products/ice-cream-cake-1.jpg",
+  chocolateMintz: "/images/products/chocolate-mintz.png",
+  cherryLemonade06: "/images/products/cherry-lemonade-06.jpg",
+  weddingCake: "/images/products/wedding-cake.png",
+  modifiedGrapes: "/images/products/modified-grapes.png",
+
+  jellysBreath: "/images/products/jellys-breath.jpg",
+  jellysBreath2: "/images/products/jellys-breath2.jpg",
+  jellysBreath3: "/images/products/jellys-breath3.jpg",
+
+  butterface: "/images/products/butterface.jpg",
+  butterface2: "/images/products/butterface2.jpg",
+  butterface3: "/images/products/butterface3.jpg",
+
+  mimosa: "/images/products/mimosa.jpg",
+  mimosa2: "/images/products/mimosa2.jpg",
+  mimosa3: "/images/products/mimosa3.jpg",
+
+  // Edibles
+  brownButterBliss: "/images/products/brown-butter-bliss.jpg",
+  brownButterBliss2: "/images/products/brown-butter-bliss2.jpg",
+
+  peppermintBrownie: "/images/products/peppermint-brownie.jpg",
+  peppermintBrownie2: "/images/products/peppermint-brownie2.jpg",
+  peppermintBrownie3: "/images/products/peppermint-brownie3.jpg",
+  peppermintBrownie4: "/images/products/peppermint-brownie4.jpg",
+
+  stoutBrownie: "/images/products/stout-brownie.jpg",
+  stoutBrownie2: "/images/products/stout-brownie2.jpg",
+  stoutBrownie3: "/images/products/stout-brownie3.jpg",
+  stoutBrownie4: "/images/products/stout-brownie4.jpg",
+
+  fruitSyrupRasberry: "/images/products/fruit-syrup-rasberry.jpg",
+  fruitSyrupRasberry2: "/images/products/fruit-syrup-rasberry2.jpg",
+  fruitSyrupRasberry3: "/images/products/fruit-syrup-rasberry3.jpg",
+
+  honeyHibiscus: "/images/products/honey-hibiscus.jpg",
+  honeyHibiscus2: "/images/products/honey-hibiscus2.jpg",
+  honeyHibiscus3: "/images/products/honey-hibiscus3.jpg",
+
+  berryFruitGummy: "/images/products/berry-fruit-gummy.jpg",
+  berryFruitGummy2: "/images/products/berry-fruit-gummy2.jpg",
+  berryFruitGummy3: "/images/products/berry-fruit-gummy3.jpg",
+
+  chocolateBrownie: "/images/products/chocolate-brownie.jpg",
+  chocolateBrownie2: "/images/products/chocolate-brownie2.jpg",
+  chocolateBrownie3: "/images/products/chocolate-brownie3.jpg",
+
+  frenchVanilla: "/images/products/french-vanilla.jpg",
+  frenchVanilla2: "/images/products/french-vanilla2.jpg",
+  frenchVanilla3: "/images/products/french-vanilla3.jpg",
+  frenchVanilla4: "/images/products/french-vanilla4.jpg",
+
+  sourPineapple: "/images/products/sour-pineapple-fruit-gummy.jpg",
+  sourPineapple2: "/images/products/sour-pineapple-fruit-gummy2.jpg",
+  sourPineapple3: "/images/products/sour-pineapple-fruit-gummy3.jpg",
+  sourPineapple4: "/images/products/sour-pineapple-fruit-gummy4.jpg",
+
+  muddyBuddy: "/images/products/muddy-buddy.jpg",
+  muddyBuddy2: "/images/products/muddy-buddy2.jpg",
+  muddyBuddy3: "/images/products/muddy-buddy3.jpg",
+  muddyBuddy4: "/images/products/muddy-buddy4.jpg",
+
+  // Concentrates
+  danteInferno: "/images/products/dante-inferno.jpg",
+  danteInferno2: "/images/products/dante-inferno2.jpg",
+
+  blackIce: "/images/products/black-ice.jpg",
+  blackIce2: "/images/products/black-ice2.jpg",
+
+  brickleberry: "/images/products/brickleberry.jpg",
+  brickleberry2: "/images/products/brickleberry2.jpg",
+  brickleberry3: "/images/products/brickleberry3.jpg",
+  brickleberry4: "/images/products/brickleberry4.jpg",
+  brickleberry5: "/images/products/brickleberry5.jpg",
+  brickleberry6: "/images/products/brickleberry6.jpg",
+  brickleberry7: "/images/products/brickleberry7.jpg",
+
+  feijoa: "/images/products/feijoa.jpg",
+  feijoa2: "/images/products/feijoa2.jpg",
+  feijoa3: "/images/products/feijoa3.jpg",
+  feijoa4: "/images/products/feijoa4.jpg",
+  feijoa5: "/images/products/feijoa5.jpg",
+  feijoa6: "/images/products/feijoa6.jpg",
+  feijoa7: "/images/products/feijoa7.jpg",
+
+  honeyDonut: "/images/products/honey-donut.jpg",
+  honeyDonut2: "/images/products/honey-donut2.jpg",
+  honeyDonut3: "/images/products/honey-donut3.jpg",
+  honeyDonut4: "/images/products/honey-donut4.jpg",
+  honeyDonut5: "/images/products/honey-donut5.jpg",
+  honeyDonut6: "/images/products/honey-donut6.jpg",
+  honeyDonut7: "/images/products/honey-donut7.jpg",
+
+  papayaJuice: "/images/products/papaya-juice.jpg",
+  papayaJuice2: "/images/products/papaya-juice2.jpg",
+  papayaJuice3: "/images/products/papaya-juice3.jpg",
+} as const;
 
 /* =========================
    Data
@@ -162,8 +169,8 @@ export const products: Product[] = [
     subcategories: ["indoor"],
     price: 35,
     potency: "26% THCA",
-    image: iceCreamCake1,
-    images: [iceCreamCake1],
+    image: IMG.iceCreamCake1,
+    images: [IMG.iceCreamCake1],
     badge: "Bestseller",
     coaUrl: "/coas/ice-cream-cake.pdf",
     variants: [
@@ -183,7 +190,7 @@ export const products: Product[] = [
     subcategories: ["indoor", "exotic", "small-batch"],
     price: 40.0,
     potency: "28% THCA",
-    image: chocolateMintz,
+    image: IMG.chocolateMintz,
     badge: "Small Batch",
     coaUrl: "/coas/chocolate-mintz.pdf",
     variants: [
@@ -203,7 +210,7 @@ export const products: Product[] = [
     subcategories: ["indoor", "exotic", "small-batch"],
     price: 40.0,
     potency: "28% THCA",
-    image: cherryLemonade06,
+    image: IMG.cherryLemonade06,
     badge: "Small Batch",
     coaUrl: "/coas/cherry-lemonade.pdf",
     variants: [
@@ -222,7 +229,7 @@ export const products: Product[] = [
     subcategories: ["indoor", "exotic", "small-batch"],
     price: 40.0,
     potency: "28% THCA",
-    image: weddingCake,
+    image: IMG.weddingCake,
     badge: "Small Batch",
     coaUrl: "/coas/wedding-cake.pdf",
     variants: [
@@ -242,7 +249,7 @@ export const products: Product[] = [
     subcategories: ["indoor", "small-batch"],
     price: 40.0,
     potency: "28% THCA",
-    image: modifiedGrapes,
+    image: IMG.modifiedGrapes,
     badge: "Small Batch",
     coaUrl: "/coas/modified-grapes.pdf",
     variants: [
@@ -262,8 +269,8 @@ export const products: Product[] = [
     subcategories: ["indoor", "organic"],
     price: 40.0,
     potency: "28% THCA",
-    image: jellysBreath, // main hero (upper-case filename)
-    images: [jellysBreath, jellysBreath2, jellysBreath3],
+    image: IMG.jellysBreath,
+    images: [IMG.jellysBreath, IMG.jellysBreath2, IMG.jellysBreath3],
     badge: "Small Batch",
     coaUrl: "/coas/modified-grapes.pdf",
     variants: [
@@ -283,8 +290,8 @@ export const products: Product[] = [
     subcategories: ["indoor", "no-till"],
     price: 40.0,
     potency: "28% THCA",
-    image: butterface,
-    images: [butterface, butterface2, butterface3],
+    image: IMG.butterface,
+    images: [IMG.butterface, IMG.butterface2, IMG.butterface3],
     badge: "Small Batch",
     coaUrl: "/coas/modified-grapes.pdf",
     variants: [
@@ -304,8 +311,8 @@ export const products: Product[] = [
     subcategories: ["indoor", "organic", "no-till"],
     price: 40.0,
     potency: "28% THCA",
-    image: mimosa,
-    images: [mimosa, mimosa2, mimosa3],
+    image: IMG.mimosa,
+    images: [IMG.mimosa, IMG.mimosa2, IMG.mimosa3],
     badge: "Small Batch",
     coaUrl: "/coas/modified-grapes.pdf",
     variants: [
@@ -325,8 +332,8 @@ export const products: Product[] = [
     subcategories: ["indoor"],
     price: 40.0,
     potency: "28% THCA",
-    image: butterface, // reuse butterface set (as in your data)
-    images: [butterface, butterface2, butterface3],
+    image: IMG.butterface, // reuse butterface set
+    images: [IMG.butterface, IMG.butterface2, IMG.butterface3],
     badge: "Small Batch",
     coaUrl: "/coas/modified-grapes.pdf",
     variants: [
@@ -348,7 +355,7 @@ export const products: Product[] = [
     subcategories: ["smalls", "indoor"],
     price: 40.0,
     potency: "28% THCA",
-    image: chocolateMintz,
+    image: IMG.chocolateMintz,
     badge: "Small Batch",
     coaUrl: "/coas/chocolate-mintz.pdf",
     variants: [
@@ -368,7 +375,7 @@ export const products: Product[] = [
     subcategories: ["smalls", "indoor", "bestseller"],
     price: 24.0,
     potency: "26% THCA",
-    image: iceCreamCake1,
+    image: IMG.iceCreamCake1,
     badge: "Bestseller",
     coaUrl: "/coas/ice-cream-cake.pdf",
     variants: [
@@ -388,7 +395,7 @@ export const products: Product[] = [
     subcategories: ["smalls", "indoor", "exotic"],
     price: 28.0,
     potency: "28% THCA",
-    image: cherryLemonade06,
+    image: IMG.cherryLemonade06,
     badge: "Small Batch",
     coaUrl: "/coas/cherry-lemonade.pdf",
     variants: [
@@ -410,8 +417,8 @@ export const products: Product[] = [
     subcategories: ["cookies"],
     price: 15.0,
     potency: "100mg",
-    image: brownButterBliss,
-    images: [brownButterBliss2, brownButterBliss2, brownButterBliss2],
+    image: IMG.brownButterBliss,
+    images: [IMG.brownButterBliss2, IMG.brownButterBliss2, IMG.brownButterBliss2],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -424,8 +431,8 @@ export const products: Product[] = [
     subcategories: ["brownies"],
     price: 29.0,
     potency: "100mg",
-    image: peppermintBrownie,
-    images: [peppermintBrownie, peppermintBrownie2, peppermintBrownie3, peppermintBrownie4],
+    image: IMG.peppermintBrownie,
+    images: [IMG.peppermintBrownie, IMG.peppermintBrownie2, IMG.peppermintBrownie3, IMG.peppermintBrownie4],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -438,8 +445,8 @@ export const products: Product[] = [
     subcategories: ["brownies"],
     price: 29.0,
     potency: "10mg squares",
-    image: stoutBrownie,
-    images: [stoutBrownie, stoutBrownie2, stoutBrownie3, stoutBrownie4],
+    image: IMG.stoutBrownie,
+    images: [IMG.stoutBrownie, IMG.stoutBrownie2, IMG.stoutBrownie3, IMG.stoutBrownie4],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -452,8 +459,8 @@ export const products: Product[] = [
     subcategories: ["syrups"],
     price: 29.0,
     potency: "100mg",
-    image: fruitSyrupRasberry,
-    images: [fruitSyrupRasberry, fruitSyrupRasberry2, fruitSyrupRasberry3],
+    image: IMG.fruitSyrupRasberry,
+    images: [IMG.fruitSyrupRasberry, IMG.fruitSyrupRasberry2, IMG.fruitSyrupRasberry3],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -466,8 +473,8 @@ export const products: Product[] = [
     subcategories: ["tinctures"],
     price: 29.0,
     potency: "500mg bottle",
-    image: honeyHibiscus,
-    images: [honeyHibiscus, honeyHibiscus2, honeyHibiscus3],
+    image: IMG.honeyHibiscus,
+    images: [IMG.honeyHibiscus, IMG.honeyHibiscus2, IMG.honeyHibiscus3],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -480,8 +487,8 @@ export const products: Product[] = [
     subcategories: ["gummies"],
     price: 29.0,
     potency: "10mg squares",
-    image: berryFruitGummy,
-    images: [berryFruitGummy, berryFruitGummy2, berryFruitGummy3],
+    image: IMG.berryFruitGummy,
+    images: [IMG.berryFruitGummy, IMG.berryFruitGummy2, IMG.berryFruitGummy3],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -494,8 +501,8 @@ export const products: Product[] = [
     subcategories: ["brownies"],
     price: 29.0,
     potency: "10mg squares",
-    image: chocolateBrownie,
-    images: [chocolateBrownie, chocolateBrownie2, chocolateBrownie3],
+    image: IMG.chocolateBrownie,
+    images: [IMG.chocolateBrownie, IMG.chocolateBrownie2, IMG.chocolateBrownie3],
     badge: "Limited",
     stock: 20,
     active: true,
@@ -508,8 +515,8 @@ export const products: Product[] = [
     subcategories: ["tinctures"],
     price: 29.0,
     potency: "500mg bottle",
-    image: frenchVanilla,
-    images: [frenchVanilla, frenchVanilla2, frenchVanilla3, frenchVanilla4],
+    image: IMG.frenchVanilla,
+    images: [IMG.frenchVanilla, IMG.frenchVanilla2, IMG.frenchVanilla3, IMG.frenchVanilla4],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -522,8 +529,8 @@ export const products: Product[] = [
     subcategories: ["gummies"],
     price: 29.0,
     potency: "100mg ggummy",
-    image: sourPineapple,
-    images: [sourPineapple, sourPineapple2, sourPineapple3, sourPineapple4],
+    image: IMG.sourPineapple,
+    images: [IMG.sourPineapple, IMG.sourPineapple2, IMG.sourPineapple3, IMG.sourPineapple4],
     badge: "Limited",
     stock: 0,
     active: true,
@@ -536,8 +543,8 @@ export const products: Product[] = [
     subcategories: ["chocolate"],
     price: 29.0,
     potency: "100mg chocolate",
-    image: muddyBuddy,
-    images: [muddyBuddy, muddyBuddy2, muddyBuddy3, muddyBuddy4],
+    image: IMG.muddyBuddy,
+    images: [IMG.muddyBuddy, IMG.muddyBuddy2, IMG.muddyBuddy3, IMG.muddyBuddy4],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -550,8 +557,8 @@ export const products: Product[] = [
     subcategories: ["tinctures"],
     price: 29.0,
     potency: "500mg bottle",
-    image: frenchVanilla,
-    images: [frenchVanilla, frenchVanilla2, frenchVanilla3, frenchVanilla4],
+    image: IMG.frenchVanilla,
+    images: [IMG.frenchVanilla, IMG.frenchVanilla2, IMG.frenchVanilla3, IMG.frenchVanilla4],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -566,8 +573,8 @@ export const products: Product[] = [
     subcategories: ["live-resin"],
     price: 15.0,
     potency: "100mg",
-    image: danteInferno,
-    images: [danteInferno, danteInferno2],
+    image: IMG.danteInferno,
+    images: [IMG.danteInferno, IMG.danteInferno2],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -580,8 +587,8 @@ export const products: Product[] = [
     subcategories: ["bubble-hash"],
     price: 15.0,
     potency: "100mg",
-    image: blackIce,
-    images: [blackIce, blackIce2],
+    image: IMG.blackIce,
+    images: [IMG.blackIce, IMG.blackIce2],
     badge: "Limited",
     stock: 1,
     active: true,
@@ -594,8 +601,16 @@ export const products: Product[] = [
     subcategories: ["hash-rosin"],
     price: 65.0,
     potency: "100mg",
-    image: brickleberry,
-    images: [brickleberry, brickleberry2, brickleberry3, brickleberry4, brickleberry5, brickleberry6, brickleberry7],
+    image: IMG.brickleberry,
+    images: [
+      IMG.brickleberry,
+      IMG.brickleberry2,
+      IMG.brickleberry3,
+      IMG.brickleberry4,
+      IMG.brickleberry5,
+      IMG.brickleberry6,
+      IMG.brickleberry7,
+    ],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -608,8 +623,8 @@ export const products: Product[] = [
     subcategories: ["hash-rosin"],
     price: 65.0,
     potency: "100mg",
-    image: feijoa,
-    images: [feijoa, feijoa2, feijoa3, feijoa4, feijoa5, feijoa6, feijoa7],
+    image: IMG.feijoa,
+    images: [IMG.feijoa, IMG.feijoa2, IMG.feijoa3, IMG.feijoa4, IMG.feijoa5, IMG.feijoa6, IMG.feijoa7],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -622,8 +637,16 @@ export const products: Product[] = [
     subcategories: ["hash-rosin"],
     price: 65.0,
     potency: "100mg",
-    image: honeyDonut,
-    images: [honeyDonut, honeyDonut2, honeyDonut3, honeyDonut4, honeyDonut5, honeyDonut6, honeyDonut7],
+    image: IMG.honeyDonut,
+    images: [
+      IMG.honeyDonut,
+      IMG.honeyDonut2,
+      IMG.honeyDonut3,
+      IMG.honeyDonut4,
+      IMG.honeyDonut5,
+      IMG.honeyDonut6,
+      IMG.honeyDonut7,
+    ],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -636,8 +659,16 @@ export const products: Product[] = [
     subcategories: ["hash-rosin"],
     price: 65.0,
     potency: "100mg",
-    image: papayaJuice,
-    images: [papayaJuice, papayaJuice2, papayaJuice3, honeyDonut4, honeyDonut5, honeyDonut6, honeyDonut7],
+    image: IMG.papayaJuice,
+    images: [
+      IMG.papayaJuice,
+      IMG.papayaJuice2,
+      IMG.papayaJuice3,
+      IMG.honeyDonut4,
+      IMG.honeyDonut5,
+      IMG.honeyDonut6,
+      IMG.honeyDonut7,
+    ],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -689,9 +720,7 @@ export function getVariantsForProduct(
   }));
 }
 
-export function getCoaUrl(
-  pOrKey: { id?: string; slug?: string; name?: string } | string
-): string | undefined {
+export function getCoaUrl(pOrKey: { id?: string; slug?: string; name?: string } | string): string | undefined {
   return resolveProduct(pOrKey)?.coaUrl;
 }
 
