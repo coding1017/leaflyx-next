@@ -1,12 +1,10 @@
 // lib/products.ts
 
-import type { StaticImageData } from "next/image";
-
 /**
  * IMPORTANT (Vercel-safe):
- * - Do NOT import from /public as modules (e.g. "@/public/...")
- * - Use string paths that map to files inside /public
- *   Example: public/images/products/foo.jpg  ->  "/images/products/foo.jpg"
+ * ✅ Do NOT import images from /public as modules (e.g. "@/public/...")
+ * ✅ Use string paths that map to files inside /public
+ *    Example: public/images/products/foo.jpg  ->  "/images/products/foo.jpg"
  *
  * This avoids Linux/Vercel webpack "Module not found" errors.
  */
@@ -20,7 +18,8 @@ export type Variant = {
   stock?: number; // units for this size; 0 = sold out
 };
 
-export type ProductImage = string | StaticImageData;
+// ✅ images are ALWAYS string public URLs
+export type ProductImage = string;
 
 export type Product = {
   id: string;
@@ -35,8 +34,7 @@ export type Product = {
     | "Concentrates"
     | "Smalls"
     | "Merch"
-    | "Misc"
-    | "Smalls";
+    | "Misc";
   /** stackable filtering facets like "indoor", "organic", "cookies", "gummies", etc. */
   subcategories?: string[];
   price: number;
@@ -528,7 +526,7 @@ export const products: Product[] = [
     category: "Edibles",
     subcategories: ["gummies"],
     price: 29.0,
-    potency: "100mg ggummy",
+    potency: "100mg gummy",
     image: IMG.sourPineapple,
     images: [IMG.sourPineapple, IMG.sourPineapple2, IMG.sourPineapple3, IMG.sourPineapple4],
     badge: "Limited",
@@ -545,20 +543,6 @@ export const products: Product[] = [
     potency: "100mg chocolate",
     image: IMG.muddyBuddy,
     images: [IMG.muddyBuddy, IMG.muddyBuddy2, IMG.muddyBuddy3, IMG.muddyBuddy4],
-    badge: "Limited",
-    stock: 2,
-    active: true,
-  },
-  {
-    id: "ed-11",
-    slug: "thca-french-vanilla-sleep-tincture",
-    name: "THCA French Vanilla Sleep Tincture",
-    category: "Edibles",
-    subcategories: ["tinctures"],
-    price: 29.0,
-    potency: "500mg bottle",
-    image: IMG.frenchVanilla,
-    images: [IMG.frenchVanilla, IMG.frenchVanilla2, IMG.frenchVanilla3, IMG.frenchVanilla4],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -660,15 +644,7 @@ export const products: Product[] = [
     price: 65.0,
     potency: "100mg",
     image: IMG.papayaJuice,
-    images: [
-      IMG.papayaJuice,
-      IMG.papayaJuice2,
-      IMG.papayaJuice3,
-      IMG.honeyDonut4,
-      IMG.honeyDonut5,
-      IMG.honeyDonut6,
-      IMG.honeyDonut7,
-    ],
+    images: [IMG.papayaJuice, IMG.papayaJuice2, IMG.papayaJuice3],
     badge: "Limited",
     stock: 2,
     active: true,
@@ -680,27 +656,51 @@ export const products: Product[] = [
    ========================= */
 
 export const PRODUCTS_BY_ID: Record<string, Product> = Object.freeze(
-  Object.fromEntries(products.map((p) => [p.id.toLowerCase(), p]))
+  Object.fromEntries(products.map((p) => [p.id.toLowerCase(), p])) as Record<string, Product>
 );
 
 export const PRODUCTS_BY_SLUG: Record<string, Product> = Object.freeze(
-  Object.fromEntries(products.map((p) => [p.slug.toLowerCase(), p]))
+  Object.fromEntries(products.map((p) => [p.slug.toLowerCase(), p])) as Record<string, Product>
 );
 
-function resolveProduct(pOrKey: { id?: string; slug?: string; name?: string } | string): Product | undefined {
+function resolveProduct(
+  pOrKey: { id?: string; slug?: string; name?: string } | string
+): Product | undefined {
   if (!pOrKey) return undefined;
+
+  // string key lookup
   if (typeof pOrKey === "string") {
-    const key = pOrKey.toLowerCase();
-    return PRODUCTS_BY_ID[key] || PRODUCTS_BY_SLUG[key] || products.find((p) => p.name.toLowerCase() === key);
+    const key = pOrKey.trim().toLowerCase();
+    if (!key) return undefined;
+
+    const byId = PRODUCTS_BY_ID[key];
+    if (byId) return byId;
+
+    const bySlug = PRODUCTS_BY_SLUG[key];
+    if (bySlug) return bySlug;
+
+    return products.find((p) => p.name.toLowerCase() === key);
   }
-  const id = pOrKey.id?.toLowerCase();
-  const slug = pOrKey.slug?.toLowerCase();
-  const name = pOrKey.name?.toLowerCase();
-  return (
-    (id && PRODUCTS_BY_ID[id]) ||
-    (slug && PRODUCTS_BY_SLUG[slug]) ||
-    products.find((p) => p.name.toLowerCase() === name)
-  );
+
+  // object lookup
+  const id = pOrKey.id?.trim().toLowerCase();
+  if (id) {
+    const byId = PRODUCTS_BY_ID[id];
+    if (byId) return byId;
+  }
+
+  const slug = pOrKey.slug?.trim().toLowerCase();
+  if (slug) {
+    const bySlug = PRODUCTS_BY_SLUG[slug];
+    if (bySlug) return bySlug;
+  }
+
+  const name = pOrKey.name?.trim().toLowerCase();
+  if (name) {
+    return products.find((p) => p.name.toLowerCase() === name);
+  }
+
+  return undefined;
 }
 
 function dollarsToCents(d: number | undefined): number {
@@ -713,6 +713,7 @@ export function getVariantsForProduct(
 ): { label: string; priceCents: number; popular?: boolean }[] | undefined {
   const prod = resolveProduct(pOrKey);
   if (!prod?.variants?.length) return undefined;
+
   return prod.variants.map((v) => ({
     label: v.label,
     priceCents: dollarsToCents(v.price),
@@ -720,7 +721,9 @@ export function getVariantsForProduct(
   }));
 }
 
-export function getCoaUrl(pOrKey: { id?: string; slug?: string; name?: string } | string): string | undefined {
+export function getCoaUrl(
+  pOrKey: { id?: string; slug?: string; name?: string } | string
+): string | undefined {
   return resolveProduct(pOrKey)?.coaUrl;
 }
 
