@@ -14,3 +14,4 @@ node_modules
 
 # Prisma generated
 /generated/prisma
+prisma/*.db
