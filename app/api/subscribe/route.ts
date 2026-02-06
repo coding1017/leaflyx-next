@@ -4,7 +4,11 @@ import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-type Body = { email: string };
+type Body = { email?: string; source?: string };
+
+function normalizeEmail(raw: unknown) {
+  return String(raw ?? "").trim().toLowerCase();
+}
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -16,8 +20,9 @@ function makeToken() {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as Body;
-    const email = String(body?.email ?? "").trim().toLowerCase();
+    const body = (await req.json().catch(() => ({}))) as Body;
+    const email = normalizeEmail(body?.email);
+    const source = typeof body?.source === "string" ? body.source : "cart_notice_modal";
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json({ ok: false, error: "Enter a valid email." }, { status: 400 });
@@ -32,41 +37,47 @@ export async function POST(req: Request) {
       );
     }
 
-    // Prefer a public site URL for email links; fallback to request origin
+    // Prefer explicit site URL for email links
     const origin =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://leaflyx.co");
+      (process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.NODE_ENV === "development" ? "http://localhost:3000" : ""))?.replace(/\/+$/, "") ||
+      new URL(req.url).origin;
 
-    // Upsert subscriber
+    // --- DB upsert (ONLY fields that are very likely to exist based on your current unsubscribe route) ---
+    // Your unsubscribe route updates: status, unsubscribedAt, and uses token.
+    // So we stick to: email, token, status, unsubscribedAt (and source if your model has it).
     const existing = await prisma.subscriber.findUnique({ where: { email } });
 
     const token = existing?.token ?? makeToken();
 
+    // Detect whether we should send the welcome email:
+    // - brand new subscriber OR previously unsubscribed
+    const prevStatus = String((existing as any)?.status ?? "").toUpperCase();
+    const shouldSend = !existing || prevStatus === "UNSUBSCRIBED";
+
+    // Upsert subscriber
     const subscriber = await prisma.subscriber.upsert({
       where: { email },
       create: {
         email,
         token,
         status: "ACTIVE",
-        source: "cart_notice_modal",
-        tags: "offline,promo",
-      },
-      update: {
-        token, // keep stable if already present
-        status: "ACTIVE",
-        source: existing?.source ?? "cart_notice_modal",
-        tags: existing?.tags ?? "offline,promo",
         unsubscribedAt: null,
-      },
+        // If your Subscriber model DOES have "source", keep it; otherwise remove this line.
+        source,
+      } as any,
+      update: {
+        status: "ACTIVE",
+        unsubscribedAt: null,
+        // keep token stable if already present
+        token,
+        // If your model has source, keep it; otherwise remove
+        source,
+      } as any,
+      select: { token: true },
     });
 
-    // Only send the welcome email if:
-    // - brand new subscriber, OR
-    // - previously unsubscribed (now re-activated)
-    const shouldSend =
-      !existing || (existing?.status && existing.status.toUpperCase() === "UNSUBSCRIBED");
-
-    const unsubscribeUrl = `${origin}/api/subscribe/unsubscribe?token=${token}`;
+    const unsubscribeUrl = `${origin}/api/unsubscribe?token=${encodeURIComponent(subscriber.token)}`;
 
     if (shouldSend) {
       const resend = new Resend(apiKey);
@@ -96,26 +107,26 @@ export async function POST(req: Request) {
             </p>
           </div>
         `,
-        // Optional but helpful for some clients:
         headers: {
           "List-Unsubscribe": `<${unsubscribeUrl}>`,
         },
       });
 
-      // Optional: notify you (set this env if you want)
-      const admin = process.env.SUBSCRIBE_NOTIFY_TO; // your inbox
+      // Optional: notify you
+      const admin = process.env.SUBSCRIBE_NOTIFY_TO;
       if (admin) {
         await resend.emails.send({
           from,
           to: admin,
           subject: "New Leaflyx subscriber",
-          html: `<p><b>${email}</b> subscribed from the cart notice modal.</p>`,
+          html: `<p><b>${email}</b> subscribed (source: ${source}).</p>`,
         });
       }
     }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("Subscribe failed:", e);
     return NextResponse.json({ ok: false, error: "Subscribe failed." }, { status: 500 });
   }
 }
