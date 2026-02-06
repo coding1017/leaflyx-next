@@ -1,6 +1,8 @@
 import Image from "next/image";
-import { ProductGrid } from "@/components/ProductGrid";
+import ProductGrid from "@/components/ProductGrid";
 import TrustBar from "@/components/TrustBar";
+
+export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   return (
