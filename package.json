@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "vercel-build": "node -e \"console.log('DB_HOST=', new URL(process.env.DATABASE_URL).host)\" && prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate && npm rebuild argon2 --build-from-source"
