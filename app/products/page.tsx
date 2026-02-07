@@ -1,6 +1,8 @@
 // app/products/page.tsx
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const runtime = "nodejs";
+
 
 import Container from "@/components/Container";
 import PageHeading from "@/components/PageHeading";
