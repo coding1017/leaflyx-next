@@ -10,8 +10,6 @@ datasource db {
   directUrl = env("APP_DIRECT_URL")
 }
 
-
-
 enum ReviewStatus {
   PENDING
   APPROVED

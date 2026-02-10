@@ -1,0 +1,1730 @@
+{
+  "users": [
+    {
+      "id": "cmkxp4wi70000qj8anuq8wg1q",
+      "createdAt": "2026-01-28T07:20:59.791Z",
+      "updatedAt": "2026-01-28T09:43:51.551Z",
+      "email": "luissballen@gmail.com",
+      "name": "luis b",
+      "image": null,
+      "birthday": null,
+      "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$OEfoq9Vi8VtCo5jJSlD23g$8yyep9BKXm+xA8c7Of2VkMb2na7W6oJUc3SqJQlEFYA",
+      "role": "USER",
+      "phone": null,
+      "address1": null,
+      "address2": null,
+      "city": null,
+      "state": null,
+      "postal": null,
+      "country": null,
+      "socialsJson": null,
+      "handle": null,
+      "publicProfileEnabled": false,
+      "publicBio": null,
+      "analyticsOptIn": false
+    },
+    {
+      "id": "cmkxre6ds0002qj6scz22ncgp",
+      "createdAt": "2026-01-28T08:24:11.728Z",
+      "updatedAt": "2026-01-30T22:01:04.554Z",
+      "email": "leaflyx.co@gmail.com",
+      "name": "lu",
+      "image": null,
+      "birthday": "1995-06-17T00:00:00.000Z",
+      "passwordHash": "$argon2id$v=19$m=65536,t=3,p=4$MN2h4uTc0O+H5ggdK2vKcQ$GhdEpwSnudzbMormy71+UTtnbLlxDeySp4JO20E0bfU",
+      "role": "ADMIN",
+      "phone": null,
+      "address1": "1234 rover street",
+      "address2": null,
+      "city": "ashland",
+      "state": "or",
+      "postal": "97210",
+      "country": "US",
+      "socialsJson": null,
+      "handle": null,
+      "publicProfileEnabled": false,
+      "publicBio": null,
+      "analyticsOptIn": false
+    }
+  ],
+  "accounts": [],
+  "sessions": [],
+  "verificationTokens": [],
+  "discountCodes": [
+    {
+      "id": "cml4rprqs0049qjcynoopym8z",
+      "code": "BIGDAWG",
+      "description": null,
+      "ambassadorLabel": "lu",
+      "isActive": true,
+      "type": "PERCENT",
+      "percentOff": 49,
+      "amountOffCents": null,
+      "minSubtotalCents": null,
+      "maxUses": null,
+      "usesCount": 0,
+      "expiresAt": null,
+      "createdAt": "2026-02-02T06:07:35.861Z",
+      "updatedAt": "2026-02-02T06:08:58.963Z"
+    }
+  ],
+  "discountRedemptions": [],
+  "reviews": [
+    {
+      "id": 2,
+      "productSlug": "indoor-thca-flower-super-runts",
+      "rating": 5,
+      "title": "Smells like a Bakery",
+      "body": "The flower was fresh and sticky, smells amazing and smoked great\npackaging was super on point and  elegant after the discrete packaging",
+      "authorName": "Juan D.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-06T16:21:01.000Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 3,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "Taste like fruit punch",
+      "body": "Get a grinder so you don't have a hard time breaking it apart, so sticky.\nsmells like fruits and berries with a strong push after you smoke it",
+      "authorName": "Tom B",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-07T17:38:47.109Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 4,
+      "productSlug": "thca-flower-jelly-breath",
+      "rating": 5,
+      "title": "Can't describe the smell",
+      "body": "Never smelled anything like this before, its fruity&sweet but with a gas \nSmokes well and rolls up easy\n#bringbackgreenweed",
+      "authorName": "Erick Sanchez",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T17:41:13.340Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 5,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "Great Deal",
+      "body": "Can't beat this for the price",
+      "authorName": "Jake D",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:42:12.803Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 6,
+      "productSlug": "indoor-thca-flower-super-runts",
+      "rating": 5,
+      "title": "Best Runts",
+      "body": "Runts have been getting played out but this one smokes better then most, big nugs too",
+      "authorName": "Sam G",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-05T17:43:32.853Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 7,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "Reeks up the house",
+      "body": "Hints of strawberry, lemon, oranges and pine.\nvery sativa like with a energetic high",
+      "authorName": "Brandon F",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-04T17:44:58.237Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 8,
+      "productSlug": "thca-berry-fruit-gummy",
+      "rating": 5,
+      "title": "Subtle taste",
+      "body": "strong effect in a small size with a strong punch",
+      "authorName": "Alejandro M",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-05T17:47:45.040Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 9,
+      "productSlug": "thca-flower-modified-grapes",
+      "rating": 5,
+      "title": "Taste like grapes",
+      "body": "super gas",
+      "authorName": "Taylor S",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:49:38.348Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 10,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "A Classic",
+      "body": "Ice Cream Cake is a classic, this one is smells very well, and smokes the same, takes me back to a ice cream store",
+      "authorName": "Sarah K",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:50:58.449Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 11,
+      "productSlug": "exotic-thca-flower-chocolate-mintz-smalls",
+      "rating": 5,
+      "title": "Such a good deal",
+      "body": "love getting smalls, best quality for almost half the price",
+      "authorName": "Erick J",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:52:52.464Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 12,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "Favorite Smalls",
+      "body": "tried a few of the smalls they have and this one is my favorite, same size mugs as regular orders from other sites",
+      "authorName": "Kim H",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:55:23.746Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 13,
+      "productSlug": "thca-french-vanilla-sleep-tincture",
+      "rating": 5,
+      "title": "Love the flavor",
+      "body": "tastes grate but be cautious, only need a small amount",
+      "authorName": "Erika F",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T17:58:26.594Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 14,
+      "productSlug": "indoor-flower-platinum-runts",
+      "rating": 5,
+      "title": "Smells Like a bakery",
+      "body": "smells great, rolls up well, gets you feeling right",
+      "authorName": "Alex W",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:11:39.952Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 15,
+      "productSlug": "exotic-thca-flower-chocolate-mintz",
+      "rating": 4,
+      "title": "",
+      "body": "Love the flavor and the calming buzz. Burns a bit fast but still really enjoyable before bed.",
+      "authorName": "Alicia R.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:17:53.593Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 16,
+      "productSlug": "exotic-thca-flower-chocolate-mintz",
+      "rating": 5,
+      "title": "",
+      "body": "The quality blew me away — sticky, aromatic, and clean burn. I’ll be reordering for sure.",
+      "authorName": "Trevor M.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:18:19.721Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 17,
+      "productSlug": "exotic-thca-flower-chocolate-mintz",
+      "rating": 5,
+      "title": "",
+      "body": "I’ve tried a bunch of THCA hemp strains and this one’s a standout. Perfect for winding down without feeling sluggish.",
+      "authorName": "Marcus L.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:18:55.791Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 18,
+      "productSlug": "exotic-thca-flower-chocolate-mintz",
+      "rating": 5,
+      "title": "",
+      "body": "Loved the mellow, relaxed vibe. Smooth taste with a touch of citrus. arrived fresh and sticky",
+      "authorName": "Lauren C",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:20:02.392Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 19,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "Incredible quality for the price. The buds were dense, fragrant, and potent — everything you want from thca flower.",
+      "authorName": "Daniel S",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:20:49.222Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 20,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "Nice and earthy flavor. Good effects with a excellent trim job.",
+      "authorName": "Emily G",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:21:23.819Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 21,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 5,
+      "title": "",
+      "body": "This one hits just right. Calming without couch lock, smooth pull, and great aroma when grinding.",
+      "authorName": "Heather P.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:22:08.010Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 22,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 4,
+      "title": "",
+      "body": "Loved the smoothness and how it burned evenly. Slightly mild flavor but effects were strong.",
+      "authorName": "Ryan K",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:22:56.641Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 23,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 5,
+      "title": "",
+      "body": "Fresh and fruity with a soft exhale. Good body calm and no paranoia. Would recommend.",
+      "authorName": "Jasmine E",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:23:34.919Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 24,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "Absolutely perfect. Great bag appeal, sticky buds, and relaxing effects that kick in fast.",
+      "authorName": "Carla F.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:24:56.885Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 25,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "Smooth burn, great body relaxation, and a hint of sweetness. Solid hemp strain overall.",
+      "authorName": "Brandon N.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:25:21.042Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 26,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "My go-to smoke now. Subtle but powerful. Smells like pine and honey — super calming after work.",
+      "authorName": "Megan S",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:26:29.120Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 27,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "",
+      "body": "Gorgeous buds and amazing smoothness. The effects are euphoric but clear-headed. Perfect balance.",
+      "authorName": "Olivia H.",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:27:17.750Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 28,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "",
+      "body": "Best hemp I’ve had so far. You can tell it’s lab-tested and fresh. Smells amazing, burns clean.",
+      "authorName": "Jordan V.",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:27:37.916Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 29,
+      "productSlug": "thca-flower-jelly-breath",
+      "rating": 5,
+      "title": "",
+      "body": "I was surprised how potent this one felt for thca. Excellent quality and slow burn.",
+      "authorName": "Chris P.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-06T18:29:30.206Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 30,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "So relaxing. I use it to unwind in the evenings and it never disappoints.",
+      "authorName": "Natalie Williams",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-03T18:33:41.094Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 31,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "The buds looked amazing right out of the bag. Sticky, fresh, and flavorful.",
+      "authorName": "Derrick J",
+      "verifiedPurchase": true,
+      "helpfulCount": 2,
+      "createdAt": "2025-10-04T18:34:56.719Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 32,
+      "productSlug": "exotic-thca-flower-chocolate-mintz",
+      "rating": 5,
+      "title": "",
+      "body": "One of the cleanest burns I’ve had yet. Zero harshness, just smooth flavor throughout.",
+      "authorName": "Jason M",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T18:35:34.310Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 33,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "This flower instantly became part of my nightly routine. The aroma when opening the bag is incredible — rich and slightly sweet with a piney note. The smoke is unbelievably smooth, and it leaves me calm without being couch-locked. You can tell the curing process was done perfectly.",
+      "authorName": "Ryan T",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-01T18:37:13.171Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 34,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "I was skeptical at first, but wow — this one hits the sweet spot between flavor and relaxation. It burns evenly, tastes clean, and the effects come on gradually with a nice mellow clarity. Great for evening sessions without the heavy grogginess.",
+      "authorName": "Chris P",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-03T18:38:15.082Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 35,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "The moment I opened the pouch, the smell filled the room — earthy, floral, and a touch citrusy. I rolled a joint and was impressed by how slow and clean it burned. By the end, I felt grounded and clear-headed. Fantastic quality from start to finish",
+      "authorName": "Natalie W",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-02T18:38:58.647Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 36,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "Hands down one of the best thca flowers I’ve had this year. The buds looked gorgeous — dense and coated in trichomes. The smoke was creamy and smooth, leaving behind a sweet, herbal aftertaste. Definitely a five-star experience all around.",
+      "authorName": "Derrick J",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:39:29.980Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 37,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 4,
+      "title": "",
+      "body": "Smooth smoke, solid potency, and a flavor that’s subtly sweet with a hint of diesel. The buds were fresh, though one or two were a little airy. Still, the overall quality and consistency make this a great purchase. Would recommend to anyone who likes a calm body feel.",
+      "authorName": "Bri C",
+      "verifiedPurchase": false,
+      "helpfulCount": 1,
+      "createdAt": "2025-10-08T18:41:32.945Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 38,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 5,
+      "title": "",
+      "body": "From packaging to performance, this product screams quality. The buds looked pristine and smelled like a mix of honey and herbs. It smoked effortlessly, no coughing or dryness. The effects were uplifting yet centered — perfect for creative work",
+      "authorName": "Jason M",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:41:59.947Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 39,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "I’ve been using this for a few weeks now, and it’s quickly become my go-to. The flavor is smooth and slightly citrusy, with a nice peppery undertone. It’s great for easing stress without knocking me out. The freshness is noticeable too — burns beautifully.",
+      "authorName": "Monica R",
+      "verifiedPurchase": true,
+      "helpfulCount": 1,
+      "createdAt": "2025-10-08T18:43:02.547Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 40,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "Everything about this product screams care — from the aroma to the perfect cure. The buds break apart beautifully and roll smooth. The effects are calming but clear enough to stay productive. Easily one of the top-tier thca flowers I’ve found.",
+      "authorName": "Katie B",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:43:53.616Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 41,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "This hemp smells like a tropical fruit smoothie. I wasn’t expecting such vibrant flavor! The effects were clear and mellow, ideal for social situations. Burned evenly, no harshness, and left a pleasant aftertaste. Will be ordering again soon.",
+      "authorName": "Julio C",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:44:18.102Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 42,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "This one was love at first sniff. The scent is floral, sweet, and natural — nothing artificial. The smoke is soft and gentle, and the effects start subtle before settling into a relaxing wave. Ideal for anxiety or just chilling with music.",
+      "authorName": "Veronica D",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:45:21.600Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 43,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "",
+      "body": "The buds were perfectly trimmed and sticky. I could tell it was high quality before even lighting up. The smoke is flavorful and smooth, and the effects are balanced — calm but not sleepy. Great all-around strain for anytime use.",
+      "authorName": "Blake H",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-05T18:45:52.913Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 44,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "The citrus and strawberry aromas on this one is incredible. It tastes just as fresh and clean as it smells. I noticed a mild uplifting energy at first that gradually melted into relaxation. Would definitely buy again, maybe try a larger amount next time.",
+      "authorName": "Rachel M",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-03T18:46:52.583Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 45,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "I was impressed right out of the package — perfect trim, nice density, and a rich smell. When smoked, it delivered a smooth, creamy pull with a bit of spice on the tongue. Great mellow effects that helped ease my mind without making me sluggish.",
+      "authorName": "Luke A",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-06T18:47:17.749Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 46,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "",
+      "body": "This product hits every mark — flavor, freshness, and effect. The buds are frosty and smell incredible. The smoke is silky smooth and produces instant calm without heaviness. Perfect for winding down or pairing with a cup of tea.",
+      "authorName": "Luke A",
+      "verifiedPurchase": true,
+      "helpfulCount": 1,
+      "createdAt": "2025-10-11T18:47:51.500Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 47,
+      "productSlug": "indoor-flower-butter-face",
+      "rating": 5,
+      "title": "",
+      "body": "The smell was strong in a good way — earthy and sweet. Burned slowly with a nice white ash, which shows it’s clean. Effects were mellow, and I could still stay focused. Not the strongest I’ve had, but still a high-quality option.",
+      "authorName": "andrew p",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T18:49:13.054Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 48,
+      "productSlug": "indoor-flower-mimosa",
+      "rating": 5,
+      "title": "",
+      "body": "This strain is a gem. The buds sparkle under light and smell fruity and floral. It smokes evenly and leaves a subtle sweetness on the lips. Great for anxiety or creative sessions. Can’t wait to try other flavors from this brand.",
+      "authorName": "Tiana J",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:54:34.174Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 49,
+      "productSlug": "indoor-thca-flower-ice-cream-cake",
+      "rating": 5,
+      "title": "",
+      "body": "Excellent smoke! The buds are compact and fresh, and it grinds perfectly. The flavor is sweet, almost creamy, and the effects kick in fast — pure relaxation without fogginess. Easily my favorite so far.",
+      "authorName": "Cory S",
+      "verifiedPurchase": true,
+      "helpfulCount": 3,
+      "createdAt": "2025-10-08T18:55:04.647Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 50,
+      "productSlug": "thca-flower-jelly-breath",
+      "rating": 5,
+      "title": "",
+      "body": "I’m in love with how clean and smooth this product is. There’s zero harshness, and the taste is slightly fruity with an earthy backbone. After a few pulls, I felt calm, relaxed, and balanced. Great product for evening use.",
+      "authorName": "Sierra w",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:55:32.502Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 51,
+      "productSlug": "thca-flower-jelly-breath",
+      "rating": 5,
+      "title": "",
+      "body": "The freshness was evident right away — soft, sticky buds and a pleasant herbal scent. Smokes clean and smooth with a slow burn. The calm focus it brings makes it ideal for reading or working late. Excellent strain overall.",
+      "authorName": "Cameron J",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:55:59.315Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 52,
+      "productSlug": "thca-flower-modified-grapes",
+      "rating": 5,
+      "title": "",
+      "body": "This hemp blew me away. The buds are vibrant, the aroma is rich and natural, and the burn is flawless. The effects are smooth and euphoric — you can tell it’s lab-tested and fresh. Definitely my new go-to",
+      "authorName": "Devon F",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:56:57.136Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 53,
+      "productSlug": "thca-flower-modified-grapes",
+      "rating": 5,
+      "title": "",
+      "body": "I was impressed with the presentation — the packaging was airtight and kept everything fresh. The smoke itself was velvety and flavorful. It gave me a perfect, balanced calm that lasted hours. Highly recommend this strain.",
+      "authorName": "Nicole S.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:57:16.719Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 54,
+      "productSlug": "thca-flower-modified-grapes",
+      "rating": 5,
+      "title": "",
+      "body": "Beautifully grown hemp with incredible flavor. The texture and cure were perfect, and it gave me an uplifting sense of calm that lasted the entire evening. No harshness, no dryness — just pure smooth enjoyment.",
+      "authorName": "Kevin R",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:57:46.103Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 55,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Honestly didn’t expect smalls to be this good. The buds might be smaller, but the flavor and aroma are just as strong as the full-size flower. Perfect for rolling without wasting big buds. Incredible value for the price",
+      "authorName": "Caleb H",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T18:59:37.592Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 56,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Don’t sleep on these. The effects hit just like the premium buds, and they smell amazing. Perfect for pre-rolls or vaping. You’re getting top-shelf quality in smaller pieces — totally worth it.",
+      "authorName": "Malik D.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T19:00:00.753Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 57,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "I grabbed these just to test them out, but I’ll be buying again for sure. They taste just as good as the main flower, maybe even a little smoother. Great way to save money without sacrificing flavor.",
+      "authorName": "Alyssa B.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T23:38:37.913Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 58,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Solid pickup! Some pieces are tiny, but they pack a punch. The smell is rich and the burn is clean. I use them for quick sessions and they always hit right.",
+      "authorName": "Owen P.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T23:39:16.862Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 59,
+      "productSlug": "exotic-thca-flower-cherry-lemonade-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Super impressed with the quality. These might be small, but the freshness and potency are still there. Great for my vaporizer. The bag even had some nice-sized nuggets in it!",
+      "authorName": "Brittany C",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-08T23:39:59.599Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 60,
+      "productSlug": "exotic-thca-flower-chocolate-mintz-smalls",
+      "rating": 4,
+      "title": "",
+      "body": "Great budget option. You can tell it’s from the same batch as the premium stuff. Some crumbs at the bottom, but nothing major. Still flavorful and relaxing.",
+      "authorName": "Naomi F.",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:09:01.131Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 61,
+      "productSlug": "exotic-thca-flower-chocolate-mintz-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Great deal! Tastes just as clean and fresh as the big buds. It’s perfect for rolling blunts or filling the grinder for quick sessions. Love that it still delivers full potency.",
+      "authorName": "Miguel V",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:10:01.999Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 62,
+      "productSlug": "exotic-thca-flower-chocolate-mintz-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "I was expecting popcorn buds, but most pieces were still really nice and sticky. The smell is strong and fruity, and the smoke is smooth. Total steal for the price point.",
+      "authorName": "Lily K",
+      "verifiedPurchase": true,
+      "helpfulCount": 1,
+      "createdAt": "2025-10-09T01:10:41.635Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 63,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Wasn’t sure what to expect from “smalls,” but I’m really happy with it. Same potency, just smaller buds. Easy to roll, flavorful, and fresh. Great pickup for everyday smoking",
+      "authorName": "Isaac M",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:11:34.667Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 64,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "These smalls are a great deal. Smooth smoke, nice potency, and the aroma fills the room. They’re perfect for casual use or making pre-rolls. Definitely reordering.",
+      "authorName": "Samantha G.",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:12:12.201Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 65,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "I got this as a budget option and ended up loving it. The buds are smaller but full of flavor. It’s smooth, relaxing, and great for winding down after work.",
+      "authorName": "Brianna H",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:12:55.774Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 66,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "The smalls smoke just as well as the main buds. They grind perfectly and have a pleasant mellow flavor. Excellent for rolling and vaping alike.",
+      "authorName": "Hunter P.",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:13:34.551Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 67,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "Loved these! Great freshness, smooth burn, and surprisingly strong effects. You really can’t go wrong for the price. It’s all quality, no filler.",
+      "authorName": "Kim L",
+      "verifiedPurchase": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:13:56.257Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 68,
+      "productSlug": "indoor-thca-flower-ice-cream-cake-smalls",
+      "rating": 5,
+      "title": "",
+      "body": "I was shocked how fresh these were. The smell is top-tier, and the buds still have crystals on them. Smokes smooth and gives a clear, relaxing buzz.",
+      "authorName": "Logan D",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T01:14:43.178Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 69,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "I’ve ordered this three times now and all the times it’s been excellent. Fresh, flavorful, and perfectly balanced effects. Honestly can’t tell the difference from the full buds once it’s ground up.",
+      "authorName": "Chloe S",
+      "verifiedPurchase": true,
+      "helpfulCount": 1,
+      "createdAt": "2025-10-09T14:47:04.562Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 71,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "This thca smells like a tropical fruit smoothie. I wasn’t expecting such vibrant flavor! The effects were clear and mellow, ideal for social situations. Burned evenly, no harshness, and left a pleasant aftertaste. Will be ordering again soon",
+      "authorName": "Julio C",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-09T16:24:00.158Z",
+      "status": "APPROVED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 72,
+      "productSlug": "exotic-thca-flower-wedding-cake",
+      "rating": 5,
+      "title": "",
+      "body": "this da bomb",
+      "authorName": "b raad",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-10T02:53:37.947Z",
+      "status": "REJECTED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 73,
+      "productSlug": "exotic-thca-flower-cherry-lemonade",
+      "rating": 5,
+      "title": "",
+      "body": "gayyyyyyyyyyy",
+      "authorName": "your gayy",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-11T03:59:31.694Z",
+      "status": "REJECTED",
+      "ipHash": null,
+      "userAgent": null
+    },
+    {
+      "id": 74,
+      "productSlug": "thca-chocolate-brownie",
+      "rating": 5,
+      "title": "",
+      "body": "you're gay",
+      "authorName": "dick",
+      "verifiedPurchase": false,
+      "helpfulCount": 0,
+      "createdAt": "2025-10-11T04:54:21.596Z",
+      "status": "REJECTED",
+      "ipHash": null,
+      "userAgent": null
+    }
+  ],
+  "reviewFlags": [
+    {
+      "id": 2,
+      "reviewId": 71,
+      "reason": "spam",
+      "details": "spam",
+      "createdAt": "2025-10-09T17:24:53.445Z"
+    },
+    {
+      "id": 3,
+      "reviewId": 69,
+      "reason": "spam",
+      "details": "",
+      "createdAt": "2025-10-10T02:53:12.874Z"
+    },
+    {
+      "id": 4,
+      "reviewId": 31,
+      "reason": "spam",
+      "details": "",
+      "createdAt": "2025-10-10T03:42:28.976Z"
+    },
+    {
+      "id": 5,
+      "reviewId": 49,
+      "reason": "abuse",
+      "details": "",
+      "createdAt": "2025-10-11T03:56:59.566Z"
+    },
+    {
+      "id": 6,
+      "reviewId": 69,
+      "reason": "gay",
+      "details": "your mom",
+      "createdAt": "2025-10-11T04:52:43.514Z"
+    },
+    {
+      "id": 7,
+      "reviewId": 39,
+      "reason": "grosero",
+      "details": "marica",
+      "createdAt": "2025-10-14T19:57:35.174Z"
+    },
+    {
+      "id": 8,
+      "reviewId": 61,
+      "reason": "other",
+      "details": "",
+      "createdAt": "2025-10-17T07:04:55.056Z"
+    }
+  ],
+  "inventory": [
+    {
+      "id": "cmkzvigs70001qjv0pz255jt1",
+      "productId": "fl-06",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:25.391Z"
+    },
+    {
+      "id": "cmkzvigs70002qjv05eqsxt3o",
+      "productId": "fl-06",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:25.392Z"
+    },
+    {
+      "id": "cmkzvigsa0004qjv0aehcpoae",
+      "productId": "fl-06",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:25.392Z"
+    },
+    {
+      "id": "cmkzvigs70000qjv0f98l6ify",
+      "productId": "fl-06",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:25.391Z"
+    },
+    {
+      "id": "cmkzvigs70003qjv01h9eshm5",
+      "productId": "fl-06",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:25.392Z"
+    },
+    {
+      "id": "cmkzvisev0005qjv0w6djr8ry",
+      "productId": "con-02",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:02:58.890Z"
+    },
+    {
+      "id": "cmkzvivxj0007qjv0z2ex5hxw",
+      "productId": "con-03",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:03:02.473Z"
+    },
+    {
+      "id": "cml4nbo2c0002qjcygfa3maya",
+      "productId": "fl-03",
+      "variant": "3.5g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:03:19.643Z"
+    },
+    {
+      "id": "cml4nbo2d0004qjcysw81y4wy",
+      "productId": "fl-03",
+      "variant": "14g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:03:19.643Z"
+    },
+    {
+      "id": "cml4nbo2d0005qjcyn7x7ukgn",
+      "productId": "fl-03",
+      "variant": "28g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:03:19.662Z"
+    },
+    {
+      "id": "cml4nbo2d0003qjcywybja320",
+      "productId": "fl-03",
+      "variant": "7g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T06:03:19.643Z"
+    },
+    {
+      "id": "cml4pct5o000jqjcygcxdvjrp",
+      "productId": "sm-03",
+      "variant": "1g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:31.932Z"
+    },
+    {
+      "id": "cml4pct5o000kqjcy1ggcgeqr",
+      "productId": "sm-03",
+      "variant": "3.5g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:31.933Z"
+    },
+    {
+      "id": "cml4pct5o000nqjcyp1tsxl54",
+      "productId": "sm-03",
+      "variant": "28g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:31.933Z"
+    },
+    {
+      "id": "cml4pct5o000mqjcybtfpax1r",
+      "productId": "sm-03",
+      "variant": "14g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:31.933Z"
+    },
+    {
+      "id": "cml4pct5o000lqjcyq52t6bsz",
+      "productId": "sm-03",
+      "variant": "7g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:31.933Z"
+    },
+    {
+      "id": "cml4pcv4o000oqjcyrxeb5sho",
+      "productId": "fl-02",
+      "variant": "1g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:34.488Z"
+    },
+    {
+      "id": "cml4pcv4o000pqjcyn3iwe2ig",
+      "productId": "fl-02",
+      "variant": "3.5g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:34.488Z"
+    },
+    {
+      "id": "cml4pcv4o000rqjcyylfng22t",
+      "productId": "fl-02",
+      "variant": "14g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:34.489Z"
+    },
+    {
+      "id": "cml4pcv4o000qqjcydvs6vngg",
+      "productId": "fl-02",
+      "variant": "7g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:34.488Z"
+    },
+    {
+      "id": "cml4pcv4o000sqjcylp8b2t5v",
+      "productId": "fl-02",
+      "variant": "28g",
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:34.489Z"
+    },
+    {
+      "id": "cml4pcxd2000tqjcyr7xwjuum",
+      "productId": "sm-01",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:08.049Z"
+    },
+    {
+      "id": "cml4pcxd3000wqjcygmihez3u",
+      "productId": "sm-01",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:08.049Z"
+    },
+    {
+      "id": "cml4pcxd2000uqjcyfhbzuoyp",
+      "productId": "sm-01",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:08.049Z"
+    },
+    {
+      "id": "cml4pcxd2000vqjcyg4qveker",
+      "productId": "sm-01",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:08.049Z"
+    },
+    {
+      "id": "cml4pcxd3000xqjcyajxgmbo4",
+      "productId": "sm-01",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:08.049Z"
+    },
+    {
+      "id": "cml4pcyvu000yqjcywj5cokpy",
+      "productId": "fl-04",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:14.088Z"
+    },
+    {
+      "id": "cml4pcyvu000zqjcyyt91mu7d",
+      "productId": "fl-04",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:14.088Z"
+    },
+    {
+      "id": "cml4pcyvv0010qjcymz2knjjj",
+      "productId": "fl-04",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:14.088Z"
+    },
+    {
+      "id": "cml4pcyvv0012qjcym04naoc7",
+      "productId": "fl-04",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:14.089Z"
+    },
+    {
+      "id": "cml4pcyvv0011qjcypv0e4vdl",
+      "productId": "fl-04",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:14.089Z"
+    },
+    {
+      "id": "cml4pd0840013qjcy5wdsna3y",
+      "productId": "con-04",
+      "variant": null,
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:15.392Z"
+    },
+    {
+      "id": "cml4pd1pd0014qjcyw236trxg",
+      "productId": "con-05",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:01:43.010Z"
+    },
+    {
+      "id": "cml4pd3gd0015qjcyot7bja5s",
+      "productId": "fl-07",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:19.290Z"
+    },
+    {
+      "id": "cml4pd3ge0016qjcyh15k2k7c",
+      "productId": "fl-07",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:19.290Z"
+    },
+    {
+      "id": "cml4pd3ge0017qjcype6kb43x",
+      "productId": "fl-07",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:19.291Z"
+    },
+    {
+      "id": "cml4pd3ge0018qjcyfeiu9ppo",
+      "productId": "fl-07",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:19.291Z"
+    },
+    {
+      "id": "cml4pd3ge0019qjcyon4fqzfb",
+      "productId": "fl-07",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:19.291Z"
+    },
+    {
+      "id": "cml4pd54o001aqjcygdhyzaoo",
+      "productId": "fl-01",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:21.311Z"
+    },
+    {
+      "id": "cml4pd54p001cqjcykzpb16gx",
+      "productId": "fl-01",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:21.309Z"
+    },
+    {
+      "id": "cml4pd54p001bqjcymudw6zqt",
+      "productId": "fl-01",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:21.308Z"
+    },
+    {
+      "id": "cml4pd54p001eqjcy4qov7td4",
+      "productId": "fl-01",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:21.310Z"
+    },
+    {
+      "id": "cml4pd54p001dqjcy0nv7yohy",
+      "productId": "fl-01",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:21.310Z"
+    },
+    {
+      "id": "cml4pd6mq001fqjcy62va07d5",
+      "productId": "sm-02",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:23.703Z"
+    },
+    {
+      "id": "cml4pd6mq001gqjcyce8z1j5k",
+      "productId": "sm-02",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:23.703Z"
+    },
+    {
+      "id": "cml4pd6mr001iqjcymmqcvpgm",
+      "productId": "sm-02",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:23.704Z"
+    },
+    {
+      "id": "cml4pd6mr001jqjcyqzw2gsto",
+      "productId": "sm-02",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:23.704Z"
+    },
+    {
+      "id": "cml4pd6mq001hqjcyeop3w2bp",
+      "productId": "sm-02",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:23.703Z"
+    },
+    {
+      "id": "cml4pd8z2001pqjcy2bu754un",
+      "productId": "fl-08",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:28.124Z"
+    },
+    {
+      "id": "cml4pd8z2001qqjcyslkcpohr",
+      "productId": "fl-08",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:28.125Z"
+    },
+    {
+      "id": "cml4pd8z2001rqjcyrn47p03u",
+      "productId": "fl-08",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:28.125Z"
+    },
+    {
+      "id": "cml4pd8z2001sqjcyqemckih6",
+      "productId": "fl-08",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:28.125Z"
+    },
+    {
+      "id": "cml4pd8z2001tqjcyb7gzq9y9",
+      "productId": "fl-08",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:28.125Z"
+    },
+    {
+      "id": "cml4pda8s001uqjcyc61wfcu0",
+      "productId": "fl-05",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:30.320Z"
+    },
+    {
+      "id": "cml4pda8s001xqjcyppegwmkw",
+      "productId": "fl-05",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:30.320Z"
+    },
+    {
+      "id": "cml4pda8s001vqjcyr6wq4kqq",
+      "productId": "fl-05",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:30.320Z"
+    },
+    {
+      "id": "cml4pda8t001yqjcyxucb4fn6",
+      "productId": "fl-05",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:30.320Z"
+    },
+    {
+      "id": "cml4pda8s001wqjcyckn2g6i9",
+      "productId": "fl-05",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:30.320Z"
+    },
+    {
+      "id": "cml4pdbhz001zqjcyrh5ulmo4",
+      "productId": "fl-10",
+      "variant": "1g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:32.420Z"
+    },
+    {
+      "id": "cml4pdbij0020qjcychxclxvc",
+      "productId": "fl-10",
+      "variant": "3.5g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:32.420Z"
+    },
+    {
+      "id": "cml4pdbij0021qjcyf98vgifw",
+      "productId": "fl-10",
+      "variant": "7g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:32.421Z"
+    },
+    {
+      "id": "cml4pdbik0022qjcy3xp7gymg",
+      "productId": "fl-10",
+      "variant": "14g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:32.421Z"
+    },
+    {
+      "id": "cml4pdbik0023qjcy1saclwbl",
+      "productId": "fl-10",
+      "variant": "28g",
+      "qty": 10,
+      "updatedAt": "2026-02-02T05:12:32.421Z"
+    },
+    {
+      "id": "cml4pdfio0024qjcy1q8a5jip",
+      "productId": "ed-10",
+      "variant": null,
+      "qty": 0,
+      "updatedAt": "2026-02-02T06:02:52.799Z"
+    },
+    {
+      "id": "cml4pdjlg0025qjcy27q01isd",
+      "productId": "con-06",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:06.196Z"
+    },
+    {
+      "id": "cml4pdkx80026qjcy7xzaxhca",
+      "productId": "ed-01",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:07.916Z"
+    },
+    {
+      "id": "cml4pdm1z0027qjcyt85r9ilt",
+      "productId": "ed-02",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:09.383Z"
+    },
+    {
+      "id": "cml4pdnnf0028qjcypl2tjr1u",
+      "productId": "ed-06",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:11.452Z"
+    },
+    {
+      "id": "cml4pdpjj0029qjcy3eeailgc",
+      "productId": "ed-07",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:13.904Z"
+    },
+    {
+      "id": "cml4pdqru002aqjcytw8ihg29",
+      "productId": "con-01",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:15.498Z"
+    },
+    {
+      "id": "cml4pds32002bqjcyqnzwn5ph",
+      "productId": "ed-08",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:17.198Z"
+    },
+    {
+      "id": "cml4pdtoh002cqjcyvpp3ip21",
+      "productId": "ed-11",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:19.265Z"
+    },
+    {
+      "id": "cml4pdvse002dqjcyse1upmuv",
+      "productId": "ed-05",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:21.999Z"
+    },
+    {
+      "id": "cml4pdxec002eqjcyb5iwswll",
+      "productId": "ed-04",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:24.084Z"
+    },
+    {
+      "id": "cml4pdyuy002fqjcyuaz40vf8",
+      "productId": "ed-09",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:25.979Z"
+    },
+    {
+      "id": "cml4pe091002gqjcyx48r1h2m",
+      "productId": "ed-03",
+      "variant": null,
+      "qty": 5,
+      "updatedAt": "2026-02-02T05:02:27.782Z"
+    }
+  ],
+  "backInStock": [],
+  "orders": [],
+  "orderItems": [],
+  "resetTokens": [
+    {
+      "id": "cmkxra85l0001qj6soxlvrq7e",
+      "userId": "cmkxp4wi70000qj8anuq8wg1q",
+      "tokenHash": "4fa354cfbc739c0f4fdfb484a81860a1ef125cbcc9f7941f0eee28db17ff91a2",
+      "expiresAt": "2026-01-28T08:51:07.400Z",
+      "usedAt": null,
+      "createdAt": "2026-01-28T08:21:07.401Z",
+      "ipHash": "eff8e7ca506627fe15dda5e0e512fcaad70b6d520f37cc76597fdb4f2d83a1a3"
+    },
+    {
+      "id": "cmkxrfgxo0004qj6sygpe4ht5",
+      "userId": "cmkxre6ds0002qj6scz22ncgp",
+      "tokenHash": "43c5a94d225c1329ffd170fa1aad568d268781459166f8ee647585342e28c3d2",
+      "expiresAt": "2026-01-28T08:55:12.060Z",
+      "usedAt": null,
+      "createdAt": "2026-01-28T08:25:12.061Z",
+      "ipHash": "eff8e7ca506627fe15dda5e0e512fcaad70b6d520f37cc76597fdb4f2d83a1a3"
+    },
+    {
+      "id": "cmkxrmoa60006qj6snygo57n3",
+      "userId": "cmkxre6ds0002qj6scz22ncgp",
+      "tokenHash": "27a5f88f80cea14343394809f00a538ea501c46b82e850293dcf58565c78acaf",
+      "expiresAt": "2026-01-28T09:00:48.174Z",
+      "usedAt": "2026-01-28T08:31:10.446Z",
+      "createdAt": "2026-01-28T08:30:48.175Z",
+      "ipHash": "eff8e7ca506627fe15dda5e0e512fcaad70b6d520f37cc76597fdb4f2d83a1a3"
+    },
+    {
+      "id": "cmkxtwnv00008qj6s78qxgcd2",
+      "userId": "cmkxre6ds0002qj6scz22ncgp",
+      "tokenHash": "a266a325186d19877f54b0bb377adf5b40ec2e47c604feb79f1664d3d4d9cc5e",
+      "expiresAt": "2026-01-28T10:04:33.420Z",
+      "usedAt": "2026-01-28T09:34:52.531Z",
+      "createdAt": "2026-01-28T09:34:33.421Z",
+      "ipHash": "eff8e7ca506627fe15dda5e0e512fcaad70b6d520f37cc76597fdb4f2d83a1a3"
+    },
+    {
+      "id": "cmkxu5mx50001qjq92s575o23",
+      "userId": "cmkxre6ds0002qj6scz22ncgp",
+      "tokenHash": "5c69276021761f8dea004299bc3dc3fc3ac5b062c7554562f7c441633e1b51ad",
+      "expiresAt": "2026-01-28T10:11:32.103Z",
+      "usedAt": "2026-01-28T09:41:52.977Z",
+      "createdAt": "2026-01-28T09:41:32.105Z",
+      "ipHash": "eff8e7ca506627fe15dda5e0e512fcaad70b6d520f37cc76597fdb4f2d83a1a3"
+    }
+  ],
+  "subscribers": [
+    {
+      "id": "cml5k4e260009qjtqh5ekvy48",
+      "email": "leaflyx.co@gmail.com",
+      "status": "ACTIVE",
+      "source": "cart_notice_modal",
+      "tags": "offline,promo",
+      "token": "c83457a9ab25dbba3dba23c554b10c6201875e97b1953f99",
+      "createdAt": "2026-02-02T19:22:47.215Z",
+      "updatedAt": "2026-02-06T00:19:16.662Z",
+      "unsubscribedAt": null
+    }
+  ]
+}
