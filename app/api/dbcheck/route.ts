@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 function safeDbHost() {
   try {
-    const u = process.env.APP_DATABASE_URL || process.env.DATABASE_URL || "";
+    const u = process.env.DATABASE_URL || "";
     if (!u) return null;
     return new URL(u).host; // safe to show host only
   } catch {
@@ -18,15 +18,23 @@ function safeDbHost() {
 export async function GET() {
   try {
     const count = await prisma.review.count();
+
     return NextResponse.json({
       ok: true,
       reviewCount: count,
       dbHost: safeDbHost(),
-      hasAPP: !!process.env.APP_DATABASE_URL,
+      hasDATABASE_URL: !!process.env.DATABASE_URL,
+      hasDIRECT_URL: !!process.env.DIRECT_URL,
     });
   } catch (e: any) {
     return NextResponse.json(
-      { ok: false, error: e?.message || String(e), dbHost: safeDbHost() },
+      {
+        ok: false,
+        error: e?.message || String(e),
+        dbHost: safeDbHost(),
+        hasDATABASE_URL: !!process.env.DATABASE_URL,
+        hasDIRECT_URL: !!process.env.DIRECT_URL,
+      },
       { status: 500 }
     );
   }
