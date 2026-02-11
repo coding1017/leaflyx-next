@@ -6,17 +6,19 @@ import { prisma } from "@/lib/prisma";
  * NOTE: includes a special key "__∅__" for null-variant rows.
  */
 export async function getInventoryMap(productId: string) {
-  const rows = await prisma.inventory.findMany({
-    where: { productId },
-    select: { variant: true, qty: true },
-  });
+  const rows = await withRetry(() =>
+    prisma.inventory.findMany({
+      where: { productId },
+      select: { variant: true, qty: true },
+    })
+  );
 
   const map = new Map<string, number>();
 
   for (const r of rows) {
     // keep null variant too (important for non-variant products)
     const key = r.variant ? String(r.variant) : "__∅__";
-    map.set(key, r.qty ?? 0);
+    map.set(key, clampQty(r.qty));
   }
 
   return map;
@@ -34,19 +36,51 @@ function clampQty(n: any): number {
   return Math.max(0, Math.floor(v));
 }
 
+/* -------------------------
+   DB reachability helpers
+-------------------------- */
+
+function isDbReachabilityError(e: any) {
+  const msg = String(e?.message || "");
+  return (
+    e?.code === "P1001" ||
+    msg.includes("Can't reach database server") ||
+    msg.includes("ECONNRESET") ||
+    msg.includes("ETIMEDOUT") ||
+    msg.includes("ENOTFOUND")
+  );
+}
+
+async function sleep(ms: number) {
+  await new Promise((r) => setTimeout(r, ms));
+}
+
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delayMs = 250): Promise<T> {
+  try {
+    return await fn();
+  } catch (e: any) {
+    if (retries > 0 && isDbReachabilityError(e)) {
+      await sleep(delayMs);
+      return withRetry(fn, retries - 1, delayMs);
+    }
+    throw e;
+  }
+}
+
 /**
  * Fetch inventory for MANY products at once.
  * Returns Record<"productId__variantOr∅", qty>
  */
 export async function getInventoryMapForProductIds(productIds: string[]) {
   const uniqueIds = Array.from(new Set(productIds.map((s) => String(s).trim()).filter(Boolean)));
-
   if (!uniqueIds.length) return {} as Record<string, number>;
 
-  const rows = await prisma.inventory.findMany({
-    where: { productId: { in: uniqueIds } },
-    select: { productId: true, variant: true, qty: true },
-  });
+  const rows = await withRetry(() =>
+    prisma.inventory.findMany({
+      where: { productId: { in: uniqueIds } },
+      select: { productId: true, variant: true, qty: true },
+    })
+  );
 
   const out: Record<string, number> = {};
 
@@ -98,13 +132,11 @@ export function buildPairsFromCatalogProducts(products: any[]) {
  *    - variant product: v.stock
  * - overlays DB values (DB wins)
  *
- * This prevents the "everything sold out" problem when DB rows are missing.
+ * If DB is temporarily unreachable, we return catalog stock only (fail-open).
  */
 export async function getInventoryOverlayForCatalogProducts(products: any[]) {
   const pairs = buildPairsFromCatalogProducts(products);
   const productIds = Array.from(new Set(pairs.map((p) => p.productId)));
-
-  const db = await getInventoryMapForProductIds(productIds);
 
   // Build catalog-stock lookup per invKey
   const catalogStock: Record<string, number> = {};
@@ -134,8 +166,22 @@ export async function getInventoryOverlayForCatalogProducts(products: any[]) {
     out[k] = typeof catalogStock[k] === "number" ? catalogStock[k] : 0;
   }
 
-  // Overlay DB values (DB wins)
-  for (const k of Object.keys(db)) out[k] = db[k];
+  // Try overlay DB values (DB wins)
+  if (!productIds.length) return out;
 
-  return out;
+  try {
+    const db = await getInventoryMapForProductIds(productIds);
+    for (const k of Object.keys(db)) out[k] = db[k];
+    return out;
+  } catch (e: any) {
+    // ✅ fail open: keep catalog stock so /shop doesn’t crash or show everything sold out
+    if (isDbReachabilityError(e)) {
+      console.error("[inventory.overlay] DB unreachable (using catalog stock only)", {
+        code: e?.code,
+        message: e?.message,
+      });
+      return out;
+    }
+    throw e;
+  }
 }

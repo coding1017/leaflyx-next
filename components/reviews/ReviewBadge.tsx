@@ -1,29 +1,41 @@
+// components/reviews/ReviewBadge.tsx
 "use client";
+
 import { useEffect, useState } from "react";
 import { StarRating } from "./StarRating";
+import { getReviewSummary } from "./reviewSummaryClient";
 
 export default function ReviewBadge({ productSlug }: { productSlug: string }) {
+  const slug = String(productSlug || "").trim();
   const [avg, setAvg] = useState<number | null>(null);
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    if (!productSlug) return;
-    (async () => {
-      try {
-        const r = await fetch(`/api/reviews/summary?slugs=${encodeURIComponent(productSlug)}`, { cache: "no-store" });
-        if (!r.ok) return;
-        const j = await r.json();
-        const entry = j?.data?.[productSlug];
-        if (!entry) return;
-        setAvg(entry.average);
-        setCount(entry.count);
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [productSlug]);
+    if (!slug) return;
 
-  if (!productSlug || avg == null || count === 0) return null;
+    let alive = true;
+
+    (async () => {
+      const summary = await getReviewSummary(slug);
+      if (!alive) return;
+
+      if (!summary || summary.count <= 0) {
+        // keep hidden if no reviews
+        setAvg(null);
+        setCount(0);
+        return;
+      }
+
+      setAvg(summary.average);
+      setCount(summary.count);
+    })();
+
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+
+  if (!slug || avg == null || count === 0) return null;
 
   return (
     <div className="mt-1 flex items-center gap-2">
