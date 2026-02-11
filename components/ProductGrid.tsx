@@ -1,4 +1,3 @@
-// components/ProductGrid.tsx
 "use client";
 
 import Link from "next/link";
@@ -264,13 +263,7 @@ function primaryImgFor(p: any): string {
 ------------------------------------ */
 
 function coaUrlFor(p: any): string | null {
-  const direct =
-    p?.coaUrl ??
-    p?.coa ??
-    p?.coa_href ??
-    p?.coaLink ??
-    null;
-
+  const direct = p?.coaUrl ?? p?.coa ?? p?.coa_href ?? p?.coaLink ?? null;
   if (direct) return String(direct);
 
   const slug = String(p?.slug ?? "").trim().toLowerCase();
@@ -392,7 +385,6 @@ function BgImage({ src, alt }: { src: string; alt: string }) {
 function readSubcategories(p: any): string[] {
   const tags: string[] = Array.isArray(p?.subcategories) ? p.subcategories : [];
   if (tags.length) return tags.map((t) => String(t).toLowerCase());
-
   return [];
 }
 
@@ -653,6 +645,15 @@ function FancySelect({
    MAIN GRID
 ------------------------------------ */
 
+type SummaryEntry = { count: number; average: number };
+type SummaryResponse = { ok: boolean; data?: Record<string, SummaryEntry>; degraded?: boolean };
+
+function buildSummaryUrl(slugs: string[]) {
+  const qs = new URLSearchParams();
+  for (const s of slugs) qs.append("slugs", s);
+  return `/api/reviews/summary?${qs.toString()}`;
+}
+
 export function ProductGrid({
   limit,
   category,
@@ -669,6 +670,11 @@ export function ProductGrid({
 
   const [filters, setFilters] = useState<string[]>([]);
   const [matchMode, setMatchMode] = useState<MatchMode>("all");
+
+  // ✅ Batched review summaries (prevents N fetches and flicker)
+  const [reviewMap, setReviewMap] = useState<Record<string, SummaryEntry>>({});
+  const [reviewsDegraded, setReviewsDegraded] = useState(false);
+  const summaryAbortRef = useRef<AbortController | null>(null);
 
   const scope = useMemo(() => {
     const base =
@@ -795,6 +801,50 @@ export function ProductGrid({
 
     return typeof limit === "number" ? out.slice(0, limit) : out;
   }, [filteredBase, sortKey, sortOrder, limit, inventoryMap]);
+
+  // ✅ Fetch review summaries ONCE for the current grid products
+  useEffect(() => {
+    const slugs = Array.from(
+      new Set(groupedSorted.map((p: any) => String(p?.slug ?? "").trim()).filter(Boolean))
+    );
+
+    // Nothing to fetch
+    if (!slugs.length) {
+      setReviewsDegraded(false);
+      return;
+    }
+
+    // Cancel in-flight
+    summaryAbortRef.current?.abort();
+    const ac = new AbortController();
+    summaryAbortRef.current = ac;
+
+    (async () => {
+      try {
+        const url = buildSummaryUrl(slugs);
+        const r = await fetch(url, { cache: "no-store", signal: ac.signal });
+        if (!r.ok) throw new Error(`summary ${r.status}`);
+        const j = (await r.json()) as SummaryResponse;
+
+        // If degraded, KEEP whatever we already have (prevents flicker)
+        if (j?.degraded) {
+          setReviewsDegraded(true);
+          return;
+        }
+
+        if (j?.data && typeof j.data === "object") {
+          setReviewMap((prev) => ({ ...prev, ...j.data })); // merge so we keep older slugs too
+        }
+        setReviewsDegraded(false);
+      } catch (e: any) {
+        // ignore abort; keep last good map so UI stays stable
+        if (e?.name === "AbortError") return;
+        setReviewsDegraded(true);
+      }
+    })();
+
+    return () => ac.abort();
+  }, [groupedSorted]);
 
   const sortOptions = useMemo(
     () => [
@@ -955,6 +1005,9 @@ export function ProductGrid({
 
           const coaHref = coaUrlFor(p);
 
+          const slug = String(p?.slug ?? "").trim();
+          const summary = slug ? reviewMap[slug] : undefined;
+
           return (
             <article
               key={String(p.id)}
@@ -1010,7 +1063,8 @@ export function ProductGrid({
                       <Link href={productHref}>{String(p.name ?? "")}</Link>
                     </h3>
 
-                    <ReviewBadge productSlug={String(p.slug ?? "")} />
+                    {/* ✅ now powered by batched summary (no per-card fetch) */}
+                    <ReviewBadge productSlug={slug} />
 
                     <QuickFacts p={p} />
 
