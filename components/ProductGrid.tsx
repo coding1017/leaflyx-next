@@ -230,16 +230,28 @@ function toImageSrcDeep(input: any, fallback = "/images/placeholder.png"): strin
 }
 
 function primaryImgFor(p: any): string {
-  const slug = String(p?.slug ?? "");
-  const metaBySlug = (ProductMeta as any)?.PRODUCTS_BY_SLUG?.[slug] ?? (ProductMeta as any)?.[slug];
+  const slugRaw = String(p?.slug ?? "");
+  const slug = slugRaw.trim().toLowerCase();
 
-  const candidates = [
+  // 1) Prefer direct catalog/db image fields first (most reliable)
+  const directCandidates = [
     p?.image,
-    p?.images,
+    Array.isArray(p?.images) ? p.images[0] : p?.images,
     p?.media,
     p?.photos,
     p?.gallery,
     p?.picture,
+  ];
+
+  for (const c of directCandidates) {
+    const src = toImageSrcDeep(c);
+    if (src && !isBadString(src) && src !== "/images/placeholder.png") return src;
+  }
+
+  // 2) Fall back to catalog meta (case-safe lookup)
+  const metaBySlug = (ProductMeta as any)?.PRODUCTS_BY_SLUG?.[slug];
+
+  const metaCandidates = [
     metaBySlug?.image,
     metaBySlug?.images,
     metaBySlug?.media,
@@ -250,13 +262,14 @@ function primaryImgFor(p: any): string {
     metaBySlug?.url,
   ];
 
-  for (const c of candidates) {
+  for (const c of metaCandidates) {
     const src = toImageSrcDeep(c);
     if (src && !isBadString(src) && src !== "/images/placeholder.png") return src;
   }
 
   return "/images/placeholder.png";
 }
+
 
 /* -----------------------------------
    COA LINK HELPER
