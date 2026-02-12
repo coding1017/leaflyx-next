@@ -56,6 +56,11 @@ export async function POST(req: Request) {
 
   const from = process.env.EMAIL_FROM || "no-reply@example.com";
 
+console.log("RESEND_API_KEY?", !!process.env.RESEND_API_KEY);
+console.log("EMAIL_FROM?", process.env.EMAIL_FROM);
+console.log("SITE?", process.env.NEXT_PUBLIC_SITE_URL);
+
+
   await resend.emails.send({
     from,
     to: email,
