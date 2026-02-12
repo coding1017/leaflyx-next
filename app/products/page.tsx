@@ -3,13 +3,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
-
 import Container from "@/components/Container";
 import PageHeading from "@/components/PageHeading";
 import SectionH2 from "@/components/SectionH2";
 import ProductGrid from "@/components/ProductGrid";
 import ResubscribedToast from "@/components/ResubscribedToast";
-import { products } from "@/lib/products";
+
+import { getCatalogProducts } from "@/lib/catalog.server";
 import { getInventoryOverlayForCatalogProducts } from "@/lib/inventory.server";
 
 function hasAnyTag(p: any, tags: string[]) {
@@ -26,6 +26,10 @@ function hasAnyTag(p: any, tags: string[]) {
 }
 
 export default async function ProductsPage() {
+  // ✅ THIS is the key line you were asking about:
+  // It replaces `import { products } from "@/lib/products"`
+  const products = await getCatalogProducts();
+
   const flower = (products as any[]).filter((p) => hasAnyTag(p, ["flower"]));
   const edibles = (products as any[]).filter((p) =>
     hasAnyTag(p, ["edibles", "brownies", "cookies", "gummies", "syrups"])

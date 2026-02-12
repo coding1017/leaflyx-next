@@ -9,13 +9,11 @@ import { products } from "@/lib/products";
 type SearchItem = {
   id: string;
   name: string;
-  slug: string; // /shop/p/[slug]
+  slug: string; // canonical slug
   image?: string;
   category?: string;
   tags?: string[];
 };
-
-const GOLD = "#d4af37";
 
 function normalize(s: string) {
   return s.toLowerCase().trim();
@@ -23,11 +21,13 @@ function normalize(s: string) {
 
 function cleanSlug(raw: string) {
   let s = String(raw || "").trim();
-  s = s.replace(/^https?:\/\/[^/]+/i, ""); // strip domain
-  s = s.replace(/^\/+/, ""); // strip leading slashes
-  s = s.replace(/^shop\/p\/+/i, ""); // strip "shop/p/"
-  s = s.replace(/^products\/+/i, ""); // strip "products/"
-  s = s.replace(/\/+$/, ""); // strip trailing slash
+  s = s.replace(/^https?:\/\/[^/]+/i, "");
+  s = s.replace(/^\/+/, "");
+  // ✅ strip legacy + canonical prefixes
+  s = s.replace(/^shop\/p\/+/i, "");
+  s = s.replace(/^shop\/+/i, "");
+  s = s.replace(/^products\/+/i, "");
+  s = s.replace(/\/+$/, "");
   return s;
 }
 
@@ -60,7 +60,7 @@ export default function HeaderSearch({
   maxResults = 8,
   className = "",
   searchRouteBase = "/search",
-  productRouteBase = "/shop/p",
+  productRouteBase = "/shop", // ✅ canonical
 }: {
   placeholder?: string;
   maxResults?: number;
@@ -141,7 +141,7 @@ export default function HeaderSearch({
 
     setOpen(false);
     setActive(-1);
-    router.push(`${productRouteBase}/${encodeURIComponent(clean)}`);
+    router.push(`${productRouteBase}/${encodeURIComponent(clean)}`); // ✅ /shop/[slug]
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -177,7 +177,6 @@ export default function HeaderSearch({
 
   return (
     <div ref={wrapRef} className={`relative ${className}`}>
-      {/* Search input (old look) */}
       <div className="relative flex items-center">
         <div className="absolute left-3 text-[var(--brand-green)] pointer-events-none">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="opacity-90">
@@ -242,7 +241,6 @@ export default function HeaderSearch({
         ) : null}
       </div>
 
-      {/* Dropdown */}
       {open ? (
         <div
           id="leaflyx-search-dropdown"
@@ -308,7 +306,6 @@ export default function HeaderSearch({
                         ${isRowActive ? "bg-white/10" : "hover:bg-white/5"}
                       `}
                     >
-                      {/* Thumbnail */}
                       <div
                         className="
                           relative h-10 w-10 shrink-0 overflow-hidden rounded-xl
@@ -316,9 +313,7 @@ export default function HeaderSearch({
                         "
                         style={
                           isRowActive
-                            ? {
-                                boxShadow: `0 0 0 1px rgba(212,175,55,0.30), 0 0 18px rgba(212,175,55,0.18)`,
-                              }
+                            ? { boxShadow: `0 0 0 1px rgba(212,175,55,0.30), 0 0 18px rgba(212,175,55,0.18)` }
                             : undefined
                         }
                       >
@@ -329,22 +324,16 @@ export default function HeaderSearch({
                         )}
                       </div>
 
-                      {/* Text */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="truncate text-sm text-[rgba(212,175,55,0.95)]">
-  {it.name}
-</div>
+                          <div className="truncate text-sm text-[rgba(212,175,55,0.95)]">{it.name}</div>
 
-
-                          {/* ✅ Category pill — hard gold, NO Tailwind default blue ring */}
                           {it.category ? (
                             <span
                               className="
                                 shrink-0 rounded-full px-2 py-0.5 text-[11px]
                                 bg-black/35 text-[var(--brand-gold)]
-                                border
-                                outline-none
+                                border outline-none
                               "
                               style={{
                                 borderColor: "rgba(212,175,55,0.35)",
@@ -362,18 +351,12 @@ export default function HeaderSearch({
                           </div>
                         ) : (
                           <div className="mt-0.5 text-[11px] text-[rgba(212,175,55,0.6)] truncate">
-  Click to open
-</div>
+                            Click to open
+                          </div>
                         )}
                       </div>
 
-                      <div
-  className={
-    isRowActive
-      ? "text-[var(--brand-gold)]"
-      : "text-[rgba(212,175,55,0.45)]"
-  }
->
+                      <div className={isRowActive ? "text-[var(--brand-gold)]" : "text-[rgba(212,175,55,0.45)]"}>
                         ›
                       </div>
                     </button>

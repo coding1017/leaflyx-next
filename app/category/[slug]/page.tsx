@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const runtime = "nodejs";
 
-
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -14,7 +13,6 @@ import ProductGrid from "@/components/ProductGrid";
 import { products } from "@/lib/products";
 import { getInventoryOverlayForCatalogProducts } from "@/lib/inventory.server";
 
-// Allowed category slugs (case-insensitive)
 const SLUGS = [
   "flower",
   "smalls",
@@ -32,16 +30,9 @@ export function generateStaticParams() {
 }
 
 function prettyTitle(slug: string) {
-  return slug
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Match slug against:
-// - p.category
-// - p.tags
-// - p.subcategories
-// Handles things like "pre-rolls" vs "pre rolls" vs "prerolls"
 function normalizeTag(s: string) {
   return String(s)
     .trim()
@@ -55,18 +46,20 @@ function hasTag(p: any, slug: string) {
 
   const cat = p?.category ? normalizeTag(p.category) : "";
   const tags: string[] = Array.isArray(p?.tags) ? p.tags.map((x: any) => normalizeTag(x)) : [];
-  const subs: string[] = Array.isArray(p?.subcategories) ? p.subcategories.map((x: any) => normalizeTag(x)) : [];
+  const subs: string[] = Array.isArray(p?.subcategories)
+    ? p.subcategories.map((x: any) => normalizeTag(x))
+    : [];
 
-  // also allow matching without hyphens ("pre-rolls" vs "prerolls")
   const needleNoDash = needle.replace(/-/g, "");
   const hay = [cat, ...tags, ...subs].filter(Boolean);
+
   return hay.some((h) => h === needle || h.replace(/-/g, "") === needleNoDash);
 }
 
 type Props = { params: { slug: string } };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const slug = params.slug.toLowerCase();
+  const slug = String(params.slug || "").toLowerCase();
   const valid = SLUGS.includes(slug as CategorySlug);
   const title = prettyTitle(valid ? slug : "Category");
 
@@ -81,22 +74,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params }: Props) {
-  const slug = params.slug.toLowerCase();
+  const slug = String(params.slug || "").toLowerCase();
   if (!SLUGS.includes(slug as CategorySlug)) notFound();
 
   const title = prettyTitle(slug);
-
-  // ✅ Use catalog products, not listProducts()
   const filtered = (products as any[]).filter((p) => hasTag(p, slug));
 
-  // ✅ Prisma overlay for this category grid
   const inventoryMap = await getInventoryOverlayForCatalogProducts(filtered);
 
   return (
     <Container>
       <PageHeading>{title}</PageHeading>
-
-      {/* ✅ Pass real products + inventory overlay */}
       <ProductGrid products={filtered} inventoryMap={inventoryMap} includeTags={[slug]} />
     </Container>
   );

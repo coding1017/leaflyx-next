@@ -9,32 +9,47 @@ import { products } from "@/lib/products";
 import { getInventoryOverlayForCatalogProducts } from "@/lib/inventory.server";
 
 function normalizeTag(s: string) {
-  return decodeURIComponent(s).trim().toLowerCase();
+  return decodeURIComponent(String(s || ""))
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, "-")
+    .replace(/\s+/g, "-");
 }
 
 function productHasTag(p: any, tag: string) {
-  const cat = p?.category ? String(p.category).toLowerCase() : "";
-  const tags: string[] = Array.isArray(p?.tags) ? p.tags.map((x: any) => String(x).toLowerCase()) : [];
-  return cat === tag || tags.includes(tag);
+  const t = normalizeTag(tag);
+
+  const cat = p?.category ? normalizeTag(p.category) : "";
+  const tags: string[] = Array.isArray(p?.tags) ? p.tags.map((x: any) => normalizeTag(x)) : [];
+  const subs: string[] = Array.isArray(p?.subcategories)
+    ? p.subcategories.map((x: any) => normalizeTag(x))
+    : [];
+
+  const tNoDash = t.replace(/-/g, "");
+  const hay = [cat, ...tags, ...subs].filter(Boolean);
+
+  return hay.some((h) => h === t || h.replace(/-/g, "") === tNoDash);
+}
+
+function prettyTitle(tag: string) {
+  const s = normalizeTag(tag).replace(/-/g, " ");
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default async function CategoryPage({ params }: { params: { category: string } }) {
   const tag = normalizeTag(params.category);
-
   const filtered = (products as any[]).filter((p) => productHasTag(p, tag));
 
-  // ✅ Prisma overlay for this grid
   const inventoryMap = await getInventoryOverlayForCatalogProducts(filtered);
 
   return (
     <Container>
       <div className="pt-6">
         <SectionH2 align="left" className="mt-2">
-          {tag.charAt(0).toUpperCase() + tag.slice(1)}
+          {prettyTitle(tag)}
         </SectionH2>
 
-        {/* ✅ Pass real products + inventory overlay */}
-        <ProductGrid products={filtered} inventoryMap={inventoryMap} />
+        <ProductGrid products={filtered} inventoryMap={inventoryMap} includeTags={[tag]} />
       </div>
     </Container>
   );

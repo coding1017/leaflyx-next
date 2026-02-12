@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import type { StaticImageData } from "next/image";
 import { prisma } from "@/lib/prisma";
-import { products, type Product as LegacyProduct } from "@/lib/products";
+import { getCatalogProducts } from "@/lib/catalog.server";
 import ProductDetailClient, { type VariantUI } from "@/components/ProductDetailClient";
 
 type PageParams = { params: { slug: string } };
@@ -16,48 +16,6 @@ type PI = string | StaticImageData;
 
 function baseUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
-}
-
-function findProductBySlugOrId(slug: string): LegacyProduct | undefined {
-  const s = slug.toLowerCase();
-  return products.find((p) => {
-    const ps = p?.slug ? String(p.slug).toLowerCase() : "";
-    const pid = p?.id ? String(p.id).toLowerCase() : "";
-    return ps === s || pid === s;
-  });
-}
-
-/**
- * ✅ SEO: For /products/[slug], we set canonical to /shop/[slug]
- * and mark this legacy route as noindex so Google doesn’t index duplicates.
- */
-export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
-  const slug = String(params.slug ?? "").toLowerCase();
-  const product = findProductBySlugOrId(slug);
-
-  if (!product) {
-    return { title: "Not found · Leaflyx" };
-  }
-
-  const canonical = `${baseUrl()}/shop/${encodeURIComponent(String(product.slug))}`;
-
-  return {
-    title: `${product.name} · Leaflyx`,
-    description: `Buy ${product.name} at Leaflyx. Lab-tested potency, premium quality.`,
-    alternates: { canonical },
-
-    // ✅ IMPORTANT: prevent duplicate indexing of /products/*
-    robots: {
-      index: false,
-      follow: true,
-    },
-
-    openGraph: {
-      title: `${product.name} · Leaflyx`,
-      description: `Buy ${product.name} at Leaflyx.`,
-      url: canonical,
-    },
-  };
 }
 
 function canonVariant(input: unknown): string | null {
@@ -72,24 +30,47 @@ function canonVariant(input: unknown): string | null {
   return s || null;
 }
 
+async function findProductBySlugOrId(slugOrId: string) {
+  const catalog = await getCatalogProducts();
+  const s = slugOrId.toLowerCase();
+
+  return (catalog as any[]).find((p) => {
+    const ps = p?.slug ? String(p.slug).toLowerCase() : "";
+    const pid = p?.id ? String(p.id).toLowerCase() : "";
+    return ps === s || pid === s;
+  });
+}
+
+/**
+ * ✅ SEO: For /products/[slug], canonical to /shop/[slug]
+ * and mark legacy route as noindex so Google doesn’t index duplicates.
+ */
+export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
+  const slug = String(params.slug ?? "").toLowerCase();
+  const product = await findProductBySlugOrId(slug);
+
+  if (!product) return { title: "Not found · Leaflyx" };
+
+  const canonical = `${baseUrl()}/shop/${encodeURIComponent(String(product.slug))}`;
+
+  return {
+    title: `${product.name} · Leaflyx`,
+    description: `Buy ${product.name} at Leaflyx. Lab-tested potency, premium quality.`,
+    alternates: { canonical },
+    robots: { index: false, follow: true },
+    openGraph: {
+      title: `${product.name} · Leaflyx`,
+      description: `Buy ${product.name} at Leaflyx.`,
+      url: canonical,
+    },
+  };
+}
+
 async function getSubscribersByVariant(productId: string) {
   const subsByVariant: Record<string, number> = {};
-  const MODEL_NAME: string | null = null;
-
-  const anyPrisma = prisma as any;
-
-  const model =
-    (MODEL_NAME ? anyPrisma[MODEL_NAME] : null) ||
-    anyPrisma.backInStockRequest ||
-    anyPrisma.backInStock ||
-    anyPrisma.restockRequest ||
-    anyPrisma.restockSubscription ||
-    null;
-
-  if (!model?.groupBy) return subsByVariant;
 
   try {
-    const rows = await model.groupBy({
+    const rows = await prisma.backInStockRequest.groupBy({
       by: ["variant"],
       where: { productId },
       _count: { _all: true },
@@ -162,7 +143,6 @@ function WhatIsTHCADetails() {
           </span>
         </summary>
 
-        {/* EXPANDED CONTENT */}
         <div className="px-5 pb-5 pt-1 text-[15px] leading-relaxed">
           <div className="bg-gradient-to-r from-emerald-300 to-yellow-300 bg-clip-text text-transparent opacity-90">
             <p>
@@ -196,8 +176,8 @@ function WhatIsTHCADetails() {
 }
 
 export default async function ProductDetailPage({ params, searchParams }: PageProps) {
-  const slug = params.slug.toLowerCase();
-  const product = findProductBySlugOrId(slug);
+  const slug = String(params.slug ?? "").toLowerCase();
+  const product = await findProductBySlugOrId(slug);
 
   if (!product) {
     return (
@@ -228,15 +208,15 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
   const subsByVariant = hasVariants ? await getSubscribersByVariant(product.id) : {};
 
   const variantsUI: VariantUI[] = hasVariants
-    ? product.variants!.map((v) => {
+    ? product.variants.map((v: any) => {
         const vid = String(v.id).toLowerCase();
         const dbQty = qtyByVariant[vid];
-        const qty = typeof dbQty === "number" ? dbQty : (v.stock ?? 0);
+        const qty = typeof dbQty === "number" ? dbQty : Number(v.stock ?? 0);
 
         return {
           id: v.id,
           label: v.label,
-          price: Number(v.price ?? product.price),
+          price: Number(v.price ?? product.price ?? 0),
           isPopular: !!v.isPopular,
           qty,
           soldOut: qty <= 0,
@@ -245,7 +225,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
       })
     : [];
 
-  const nonVariantQty = productLevelQty != null ? productLevelQty : (product.stock ?? 0);
+  const nonVariantQty = productLevelQty != null ? productLevelQty : Number(product.stock ?? 0);
 
   const wanted = canonVariant(searchParams?.variant);
   const wantedExists =
@@ -260,7 +240,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
   return (
     <ProductDetailClient
       slug={slug}
-      product={product}
+      product={product as any}
       hasVariants={hasVariants}
       variantsUI={variantsUI}
       nonVariantQty={nonVariantQty}

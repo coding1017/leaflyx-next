@@ -85,7 +85,7 @@ model User {
   email String  @unique
   name  String?
   image String?
-  birthday  DateTime? 
+  birthday  DateTime?
 
   // Credentials auth (store hash only — NEVER plaintext)
   passwordHash String?
@@ -268,3 +268,43 @@ model Subscriber {
   unsubscribedAt DateTime?
 }
 
+/**
+ * ✅ DB-backed catalog products (Admin can add products without touching lib/products.ts)
+ */
+model CatalogProduct {
+  id            String   @id
+  slug          String   @unique
+  name          String
+
+  category      String
+  subcategories Json?
+  tags          Json?
+
+  price         Float?
+  potency       String?
+  badge         String?
+  coaUrl        String?
+  active        Boolean  @default(true)
+
+  imageUrl      String?
+  imageUrls     Json?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  variants      CatalogVariant[]
+}
+
+model CatalogVariant {
+  productId   String
+  id          String   // "3.5g"
+  label       String?
+  grams       Float?
+  price       Float?
+  isPopular   Boolean  @default(false)
+
+  product     CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, id])
+  @@index([productId])
+}

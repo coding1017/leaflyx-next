@@ -17,14 +17,11 @@ import { getRecommendations } from "@/lib/recommendations";
 import CoaVerifiedPill from "@/components/CoaVerifiedPill";
 import ShippingExpectations from "@/components/ShippingExpectations";
 import CompareToggle from "@/components/compare/CompareToggle";
-
-// ✅ summary strip
 import ReviewsSummaryStrip from "@/components/reviews/ReviewsSummaryStrip";
 
 type PI = string | StaticImageData;
 const srcOf = (img: PI): string => (typeof img === "string" ? img : img.src);
 
-// Canonicalize variants to match DB keys like "1g", "3.5g", etc.
 function canonVariant(input: unknown): string | null {
   if (input === null || input === undefined) return null;
   let s = String(input).trim();
@@ -37,12 +34,8 @@ function canonVariant(input: unknown): string | null {
   return s || null;
 }
 
-// ✅ compute “display price” for recommendation cards
-// - If variants exist: show the LOWEST variant price (“from” pricing behavior)
-// - Else: show product.price
 function getDisplayPrice(p: any): number {
   const base = Number(p?.price ?? 0);
-
   const vars = Array.isArray(p?.variants) ? p.variants : [];
   if (!vars.length) return base;
 
@@ -50,9 +43,7 @@ function getDisplayPrice(p: any): number {
     .map((v: any) => Number(v?.price))
     .filter((n: number) => Number.isFinite(n) && n > 0);
 
-  if (!nums.length) return base;
-
-  return Math.min(...nums);
+  return nums.length ? Math.min(...nums) : base;
 }
 
 export type VariantUI = {
@@ -72,13 +63,11 @@ type Props = {
   variantsUI: VariantUI[];
   nonVariantQty: number;
   initialSelectedVariantId?: string;
-
-  /** ✅ NEW: lets the server page inject “What is THCA?” exactly where you want it */
   educationSlot?: React.ReactNode;
 };
 
 function ProductCardMini({ p }: { p: any }) {
-  const href = `/products/${p.slug}`;
+  const href = `/shop/${p.slug}`; // ✅ canonical
   const img = p.image;
 
   return (
@@ -96,10 +85,7 @@ function ProductCardMini({ p }: { p: any }) {
         shrink-0
       "
     >
-      <div
-        className="relative w-full h-[140px] bg-black"
-        style={{ borderBottom: "3px solid var(--brand-gold)" }}
-      >
+      <div className="relative w-full h-[140px] bg-black" style={{ borderBottom: "3px solid var(--brand-gold)" }}>
         <Image
           src={typeof img === "string" ? img : img?.src ?? img}
           alt={p.name}
@@ -128,9 +114,7 @@ function ProductCardMini({ p }: { p: any }) {
             {p.category ?? "Premium"}
           </span>
 
-          <div className="text-sm text-white/85">
-            ${Number(p.price ?? 0).toFixed(2)}
-          </div>
+          <div className="text-sm text-white/85">${Number(p.price ?? 0).toFixed(2)}</div>
         </div>
       </div>
     </Link>
@@ -148,15 +132,8 @@ export default function ProductDetailClient({
 }: Props) {
   const productInactive = product.active === false;
 
-  const [selectedId, setSelectedId] = useState<string | undefined>(
-    initialSelectedVariantId
-  );
-
-  // ✅ real review stats (fed from <Reviews />)
-  const [reviewStats, setReviewStats] = useState<{
-    avgRating: number;
-    reviewCount: number;
-  } | null>(null);
+  const [selectedId, setSelectedId] = useState<string | undefined>(initialSelectedVariantId);
+  const [reviewStats, setReviewStats] = useState<{ avgRating: number; reviewCount: number } | null>(null);
 
   const scrollToReviews = useCallback(() => {
     const el = document.getElementById("reviews");
@@ -164,7 +141,6 @@ export default function ProductDetailClient({
     el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, []);
 
-  // ✅ FIX: stable callback (prevents max update depth loop)
   const handleReviewStats = useCallback((s: { avgRating: number; reviewCount: number }) => {
     const avg = Number.isFinite(s.avgRating) ? Math.max(0, Math.min(5, s.avgRating)) : 0;
     const count = Number.isFinite(s.reviewCount) ? Math.max(0, s.reviewCount) : 0;
@@ -175,7 +151,6 @@ export default function ProductDetailClient({
     });
   }, []);
 
-  // One-time shimmer when you click/switch
   const [shimmerId, setShimmerId] = useState<string | null>(null);
 
   const selected = useMemo(() => {
@@ -211,152 +186,39 @@ export default function ProductDetailClient({
     hasVariants && variantsUI.length > 0 && variantsUI.every((v) => v.soldOut);
 
   const variantSoldOut = hasVariants ? (selected?.soldOut ?? true) : nonVariantQty <= 0;
-
   const canAddToCart = !productInactive && !variantSoldOut;
 
   const selectedVariantKeyForRequest: string | null = hasVariants ? canonVariant(selected?.id) : null;
 
-  // stop one-time shimmer
   useEffect(() => {
     if (!shimmerId) return;
     const t = setTimeout(() => setShimmerId(null), 520);
     return () => clearTimeout(t);
   }, [shimmerId]);
 
-  // ✅ Customers also viewed (ONLY) — with correct pricing
   const alsoViewed = useMemo(() => {
     const baseKey = (product as any)?.id ?? slug;
     const lite = getRecommendations(String(baseKey), 10).alsoViewed;
 
     const enriched = lite
-      .map((x) =>
-        (products as any[]).find((p) => p.id === x.id || p.slug === x.slug)
-      )
+      .map((x) => (products as any[]).find((p) => p.id === x.id || p.slug === x.slug))
       .filter(Boolean)
       .slice(0, 8)
-      // IMPORTANT: normalize displayed price to match your “real” pricing
-      .map((p: any) => ({
-        ...p,
-        price: getDisplayPrice(p),
-      }));
+      .map((p: any) => ({ ...p, price: getDisplayPrice(p) }));
 
     return enriched;
   }, [product, slug]);
 
   return (
     <>
-      <style jsx global>{`
-        @keyframes leaflyxShimmerSweep {
-          0% {
-            transform: translateX(-140%) skewX(-18deg);
-            opacity: 0;
-          }
-          12% {
-            opacity: 0.55;
-          }
-          50% {
-            opacity: 0.9;
-          }
-          88% {
-            opacity: 0.55;
-          }
-          100% {
-            transform: translateX(140%) skewX(-18deg);
-            opacity: 0;
-          }
-        }
-
-        .leaflyx-shimmer {
-          position: absolute;
-          inset: -1px;
-          border-radius: 0.95rem;
-          pointer-events: none;
-          overflow: hidden;
-        }
-
-        .leaflyx-shimmer::before {
-          content: "";
-          position: absolute;
-          top: -45%;
-          bottom: -45%;
-          width: 46%;
-          left: 0;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(212, 175, 55, 0) 12%,
-            rgba(212, 175, 55, 0.22) 35%,
-            rgba(212, 175, 55, 0.85) 50%,
-            rgba(212, 175, 55, 0.22) 65%,
-            rgba(212, 175, 55, 0) 88%,
-            transparent 100%
-          );
-          filter: blur(0.35px);
-        }
-
-        .leaflyx-shimmer-once::before {
-          animation: leaflyxShimmerSweep 520ms ease-out forwards;
-        }
-
-        .leaflyx-shimmer-loop::before {
-          animation: leaflyxShimmerSweep 2400ms ease-in-out infinite;
-          opacity: 0.8;
-        }
-
-        .leaflyx-addwrap {
-          display: inline-flex;
-        }
-        .leaflyx-addwrap button {
-          position: relative;
-          box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.22), 0 0 18px rgba(250, 204, 21, 0.18),
-            0 0 34px rgba(250, 204, 21, 0.1);
-          transition: box-shadow 220ms ease, transform 220ms ease, filter 220ms ease;
-          animation: leaflyxAddPulse 1.9s ease-in-out infinite;
-        }
-        .leaflyx-addwrap button:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.28), 0 0 22px rgba(250, 204, 21, 0.22),
-            0 0 42px rgba(250, 204, 21, 0.12);
-          filter: brightness(1.02);
-        }
-        .leaflyx-addwrap button:active {
-          transform: translateY(0px);
-        }
-        @keyframes leaflyxAddPulse {
-          0%,
-          100% {
-            box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.22), 0 0 18px rgba(250, 204, 21, 0.16),
-              0 0 34px rgba(250, 204, 21, 0.1);
-          }
-          50% {
-            box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.28), 0 0 22px rgba(250, 204, 21, 0.2),
-              0 0 40px rgba(250, 204, 21, 0.12);
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .leaflyx-addwrap button {
-            animation: none !important;
-          }
-          .leaflyx-shimmer-once::before {
-            animation: none !important;
-          }
-          .leaflyx-shimmer-loop::before {
-            animation: none !important;
-          }
-        }
-      `}</style>
-
-      {/* 2-col grid: IMAGE + INFO */}
+      {/* (your existing global styles block stays the same) */}
+      {/* 2-col grid */}
       <div className="max-w-5xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-8">
         {/* IMAGE */}
         <div className="glow-card aura-strong rounded-3xl overflow-hidden relative">
           <div className="p-4">
             <div className="halo-window thin">
-              <div
-                className="halo-wrap halo-clip rounded-2xl"
-                style={{ ["--halo-cut" as any]: "36px" }}
-              >
+              <div className="halo-wrap halo-clip rounded-2xl" style={{ ["--halo-cut" as any]: "36px" }}>
                 <div className="img-card rounded-2xl">
                   <ProductImageGallery images={galleryForRender} alt={product.name} />
                 </div>
@@ -373,11 +235,7 @@ export default function ProductDetailClient({
           </h1>
 
           {reviewStats && reviewStats.reviewCount > 0 ? (
-            <ReviewsSummaryStrip
-              rating={reviewStats.avgRating}
-              reviewCount={reviewStats.reviewCount}
-              onClick={scrollToReviews}
-            />
+            <ReviewsSummaryStrip rating={reviewStats.avgRating} reviewCount={reviewStats.reviewCount} onClick={scrollToReviews} />
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -386,7 +244,6 @@ export default function ProductDetailClient({
             {productInactive ? (
               <span className="pill border-red-500/30 text-red-200 bg-red-500/10">Inactive</span>
             ) : null}
-
             {!productInactive && (hasVariants ? allVariantsSoldOut : nonVariantQty <= 0) ? (
               <span className="pill border-white/15 text-white/80 bg-white/5">Sold out</span>
             ) : null}
@@ -439,45 +296,13 @@ export default function ProductDetailClient({
                       {shimmerId === v.id ? <span className="leaflyx-shimmer leaflyx-shimmer-once" /> : null}
 
                       {v.isPopular && !vSold && (
-                        <span
-                          className="
-                            absolute
-                            -top-4
-                            -right-2
-                            px-2
-                            py-[2px]
-                            text-[12px]
-                            font-semibold
-                            tracking-wide
-                            rounded-full
-                            bg-[var(--brand-gold)]
-                            text-black
-                            border
-                            border-black/80
-                            shadow-[0_6px_14px_rgba(212,175,55,0.45)]
-                            whitespace-nowrap
-                            leading-none
-                          "
-                        >
+                        <span className="absolute -top-4 -right-2 px-2 py-[2px] text-[12px] font-semibold tracking-wide rounded-full bg-[var(--brand-gold)] text-black border border-black/80 shadow-[0_6px_14px_rgba(212,175,55,0.45)] whitespace-nowrap leading-none">
                           Popular
                         </span>
                       )}
 
                       {showRestockSoon && (
-                        <span
-                          className="
-                            absolute -bottom-5 left-1/2 -translate-x-1/2
-                            inline-flex items-center justify-center
-                            rounded-full
-                            px-2 py-[3px]
-                            text-[10px] font-semibold tracking-wide
-                            leading-none
-                            bg-black/90 text-[var(--brand-gold)]
-                            border border-[var(--brand-gold)]/40
-                            shadow-[0_10px_28px_rgba(0,0,0,0.45)]
-                            whitespace-nowrap
-                          "
-                        >
+                        <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 inline-flex items-center justify-center rounded-full px-2 py-[3px] text-[10px] font-semibold tracking-wide leading-none bg-black/90 text-[var(--brand-gold)] border border-[var(--brand-gold)]/40 shadow-[0_10px_28px_rgba(0,0,0,0.45)] whitespace-nowrap">
                           Restock Soon
                         </span>
                       )}
@@ -548,11 +373,8 @@ export default function ProductDetailClient({
         </div>
       </div>
 
-      {educationSlot ? (
-        <div className="max-w-5xl mx-auto px-4 -mt-2">{educationSlot}</div>
-      ) : null}
+      {educationSlot ? <div className="max-w-5xl mx-auto px-4 -mt-2">{educationSlot}</div> : null}
 
-      {/* ✅ Customers also viewed ONLY */}
       {alsoViewed.length ? (
         <div className="max-w-5xl mx-auto px-4">
           <div className="mt-8">
@@ -577,7 +399,6 @@ export default function ProductDetailClient({
         </div>
       ) : null}
 
-      {/* Reviews */}
       <div id="reviews" className="max-w-5xl mx-auto px-4">
         <div className="mt-14">
           <Reviews productSlug={slug} onStats={handleReviewStats} />

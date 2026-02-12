@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
-import { products } from "@/lib/products";
+import { getCatalogProducts } from "@/lib/catalog.server";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,9 +16,40 @@ function canon(v: string | null | undefined) {
   return s.length ? s : null;
 }
 
+function normalizeImageUrl(input: any): string | null {
+  if (!input) return null;
+
+  if (typeof input === "object" && typeof input.src === "string") {
+    input = input.src;
+  }
+
+  if (typeof input !== "string") return null;
+
+  let s = input.trim();
+  if (!s) return null;
+
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  if (s.startsWith("data:")) return s;
+
+  if (!s.startsWith("/")) s = "/" + s;
+  return s;
+}
+
+function pickImage(p: any): string | null {
+  const direct =
+    p?.image ||
+    p?.imageUrl ||
+    p?.thumbnail ||
+    p?.thumb ||
+    (Array.isArray(p?.images) ? p.images[0] : null) ||
+    (Array.isArray(p?.gallery) ? p.gallery[0] : null) ||
+    (Array.isArray(p?.imageUrls) ? p.imageUrls[0] : null);
+
+  return normalizeImageUrl(direct);
+}
+
 function pickCategory(p: any): string | null {
   if (p?.category) return String(p.category);
-
   const tags: string[] = Array.isArray(p?.tags) ? p.tags.map(String) : [];
   const known = [
     "flower",
@@ -40,48 +71,6 @@ function pickCategory(p: any): string | null {
     .join(" ");
 }
 
-/**
- * Admin page reads this data from JSON over HTTP.
- * next/image cannot use StaticImageData objects coming through JSON,
- * so we normalize any "imported image object" into a string URL.
- */
-function normalizeImageUrl(input: any): string | null {
-  if (!input) return null;
-
-  // If it's StaticImageData-like: { src: "/_next/static/media/..." }
-  if (typeof input === "object" && typeof input.src === "string") {
-    input = input.src;
-  }
-
-  if (typeof input !== "string") return null;
-
-  let s = input.trim();
-  if (!s) return null;
-
-  // absolute urls ok
-  if (s.startsWith("http://") || s.startsWith("https://")) return s;
-
-  // data urls ok (optional)
-  if (s.startsWith("data:")) return s;
-
-  // ensure leading slash for relative assets
-  if (!s.startsWith("/")) s = "/" + s;
-
-  return s;
-}
-
-function pickImage(p: any): string | null {
-  const direct =
-    p?.image ||
-    p?.imageUrl ||
-    p?.thumbnail ||
-    p?.thumb ||
-    (Array.isArray(p?.images) ? p.images[0] : null) ||
-    (Array.isArray(p?.gallery) ? p.gallery[0] : null);
-
-  return normalizeImageUrl(direct);
-}
-
 function variantLabelFromProduct(p: any, variantId: string | null) {
   if (!variantId) return null;
   const v = Array.isArray(p?.variants)
@@ -101,6 +90,30 @@ function buildProductHref(slug: string | null, variant: string | null) {
 function prettyVariant(variant: string | null, variantLabel: string | null) {
   const v = (variantLabel ?? variant ?? "").trim();
   return v || null;
+}
+
+async function upsertInventoryQty(productId: string, variant: string | null, qty: number) {
+  // ✅ Prisma TS gets weird with compound unique + nullable field.
+  // So we do: findFirst → update by id OR create.
+  const existing = await prisma.inventory.findFirst({
+    where: { productId, variant },
+    select: { id: true, qty: true },
+  });
+
+  if (existing?.id) {
+    await prisma.inventory.update({
+      where: { id: existing.id },
+      data: { qty },
+    });
+    return { prevQty: existing.qty, nextQty: qty, created: false };
+  }
+
+  const created = await prisma.inventory.create({
+    data: { productId, variant, qty },
+    select: { qty: true },
+  });
+
+  return { prevQty: 0, nextQty: created.qty, created: true };
 }
 
 async function sendRestockEmails(args: {
@@ -138,9 +151,9 @@ async function sendRestockEmails(args: {
     try {
       await resend.emails.send({
         from:
-  process.env.RESEND_FROM ||
-  process.env.EMAIL_FROM ||
-  "Leaflyx <onboarding@resend.dev>",
+          process.env.RESEND_FROM ||
+          process.env.EMAIL_FROM ||
+          "Leaflyx <onboarding@resend.dev>",
         to: m.email,
         subject,
         html: `
@@ -169,7 +182,6 @@ async function sendRestockEmails(args: {
     }
   }
 
-  // Clean up ONLY successfully emailed rows
   let deleted = 0;
   if (sentIds.length) {
     const del = await prisma.backInStockRequest.deleteMany({
@@ -186,6 +198,8 @@ export async function GET(req: Request) {
     if (!requireAdmin(req)) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const catalog = await getCatalogProducts();
 
     const inv = await prisma.inventory.findMany({
       select: { productId: true, variant: true, qty: true, updatedAt: true },
@@ -208,10 +222,9 @@ export async function GET(req: Request) {
       invMap.set(key, { qty: r.qty, updatedAt: r.updatedAt });
     }
 
-    // Catalog-driven list so ALL products show (with placeholders)
     const rows: any[] = [];
 
-    for (const p of products as any[]) {
+    for (const p of catalog as any[]) {
       const productId = String(p.id);
       const productName = String(p.name ?? p.title ?? productId);
       const slug = p.slug ? String(p.slug) : null;
@@ -247,10 +260,8 @@ export async function GET(req: Request) {
           qty,
           updatedAt: updatedAt.toISOString(),
           subscribers,
-
           category,
           image,
-
           missingInventory: !invRow,
         });
       }
@@ -258,10 +269,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ok: true, rows });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: 500 });
   }
 }
 
@@ -270,6 +278,8 @@ export async function POST(req: Request) {
     if (!requireAdmin(req)) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+
+    const catalog = await getCatalogProducts();
 
     const body = await req.json();
 
@@ -281,8 +291,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Missing productId" }, { status: 400 });
     }
 
-    // Product meta for better emails + correct link
-    const p = (products as any[]).find(
+    const p = (catalog as any[]).find(
       (x) => String(x?.id).toLowerCase() === productId.toLowerCase()
     );
 
@@ -293,7 +302,7 @@ export async function POST(req: Request) {
     if (action === "createMissing") {
       let created = 0;
 
-      for (const pp of products as any[]) {
+      for (const pp of catalog as any[]) {
         const pid = String(pp.id);
 
         const vars: Array<string | null> =
@@ -308,9 +317,7 @@ export async function POST(req: Request) {
           });
 
           if (!exists) {
-            await prisma.inventory.create({
-              data: { productId: pid, variant: v, qty: 0 },
-            });
+            await prisma.inventory.create({ data: { productId: pid, variant: v, qty: 0 } });
             created += 1;
           }
         }
@@ -325,18 +332,14 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "Invalid qty" }, { status: 400 });
       }
 
-      const existing = await prisma.inventory.findFirst({
+      const prev = await prisma.inventory.findFirst({
         where: { productId, variant },
-        select: { id: true, qty: true },
+        select: { qty: true },
       });
 
-      const prevQty = existing?.qty ?? 0;
+      const prevQty = prev?.qty ?? 0;
 
-      await prisma.inventory.upsert({
-        where: existing?.id ? { id: existing.id } : { id: "__never__" },
-        update: { qty },
-        create: { productId, variant, qty },
-      });
+      await upsertInventoryQty(productId, variant, qty);
 
       const nextQty = qty;
 
@@ -345,7 +348,6 @@ export async function POST(req: Request) {
       let sendErrors = 0;
       let deleted = 0;
 
-      // auto-send only on 0 -> >0
       if (prevQty <= 0 && nextQty > 0) {
         const sent = await sendRestockEmails({
           productId,
@@ -374,26 +376,16 @@ export async function POST(req: Request) {
     }
 
     if (action === "resetQty") {
-      const existing = await prisma.inventory.findFirst({
+      const prev = await prisma.inventory.findFirst({
         where: { productId, variant },
-        select: { id: true, qty: true },
+        select: { qty: true },
       });
 
-      const prevQty = existing?.qty ?? 0;
+      const prevQty = prev?.qty ?? 0;
 
-      await prisma.inventory.upsert({
-        where: existing?.id ? { id: existing.id } : { id: "__never__" },
-        update: { qty: 0 },
-        create: { productId, variant, qty: 0 },
-      });
+      await upsertInventoryQty(productId, variant, 0);
 
-      return NextResponse.json({
-        ok: true,
-        productId,
-        variant,
-        prevQty,
-        nextQty: 0,
-      });
+      return NextResponse.json({ ok: true, productId, variant, prevQty, nextQty: 0 });
     }
 
     if (action === "notify") {
@@ -416,14 +408,8 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json(
-      { ok: false, error: `Unknown action: ${action}` },
-      { status: 400 }
-    );
+    return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });
   } catch (e: any) {
-    return NextResponse.json(
-      { ok: false, error: e?.message ?? "Failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: 500 });
   }
 }

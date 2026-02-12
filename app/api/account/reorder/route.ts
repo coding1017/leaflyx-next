@@ -7,10 +7,11 @@ import { products } from "@/lib/products";
 import type { StaticImageData } from "next/image";
 
 type PI = string | StaticImageData;
-const srcOf = (img: PI | null | undefined): string | null => {
+
+function srcOf(img: PI | null | undefined): string | null {
   if (!img) return null;
   return typeof img === "string" ? img : img.src;
-};
+}
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -46,8 +47,9 @@ export async function POST(req: Request) {
   }
 
   const items = order.items.map((it) => {
-    const p = products.find((x) => x.id === it.productId);
-    const image = srcOf((p as any)?.image);
+    const p = (products as any[]).find((x) => String(x.id) === String(it.productId));
+    const image = srcOf((p as any)?.image ?? (p as any)?.images?.[0] ?? null);
+    const slug = (p as any)?.slug ? String((p as any).slug) : null;
 
     return {
       productId: it.productId,
@@ -55,8 +57,9 @@ export async function POST(req: Request) {
       variant: it.variant ?? null,
       qty: it.qty,
       priceCents: it.priceCents,
-      image, // ✅ string | null
-      slug: (p as any)?.slug ?? null, // optional if you want “View product”
+      image, // string | null
+      slug,  // slug | null (for “View product”)
+      href: slug ? `/shop/${slug}` : null, // ✅ canonical
     };
   });
 

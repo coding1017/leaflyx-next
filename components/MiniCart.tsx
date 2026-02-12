@@ -18,7 +18,7 @@ type MiniCartRender = (args: { open: boolean; toggle: () => void }) => React.Rea
 const GOLD = "#d4af37";
 
 function srcOf(img: any): any {
-  return img;
+  return typeof img === "string" ? img : img?.src ?? img;
 }
 
 function pickDefaultVariant(p: any) {
@@ -138,10 +138,9 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
   if (!mounted) return trigger;
 
-  // widths / dividers
-  const REC_W = 320; // 460 -> 320 (≈30% smaller)
-  const CART_W = 420; // keep your cart width
-  const DIVIDER_W = 3; // 3x thicker
+  const REC_W = 320;
+  const CART_W = 420;
+  const DIVIDER_W = 3;
 
   return (
     <>
@@ -150,7 +149,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
       {open &&
         createPortal(
           <div role="dialog" aria-modal="true" className="fixed inset-0 z-[9999]">
-            {/* overlay */}
             <div
               className={`absolute inset-0 bg-black/55 backdrop-blur-sm transition-opacity duration-200 ${
                 animateIn ? "opacity-100" : "opacity-0"
@@ -158,7 +156,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
               onClick={() => setOpen(false)}
             />
 
-            {/* wrapper */}
             <div
               className={`
                 absolute right-0 top-0 h-full
@@ -168,13 +165,11 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
               `}
               style={{ gap: 0 }}
             >
-              {/* LEFT: Pairs well (hidden on small screens) */}
+              {/* LEFT: Pairs well */}
               <aside
                 className={`
                   hidden lg:flex h-full
-                  border-l
-                  bg-black/70 text-white
-                  flex-col
+                  border-l bg-black/70 text-white flex-col
                 `}
                 style={{
                   width: REC_W,
@@ -186,7 +181,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 <div className="px-4 pt-4 pb-2">
                   <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
-                      {/* ✅ matches Cart sizing + subtle underline */}
                       <h3 className="text-xl font-semibold leading-none">
                         <span className="bg-gradient-to-r from-emerald-200 to-yellow-200 bg-clip-text text-transparent">
                           Pairs Well With
@@ -274,13 +268,11 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                 </div>
 
                                 <div className="mt-2 flex items-center justify-between gap-3">
-                                  <div className="text-sm text-white/85">
-                                    ${Number(priceDollars).toFixed(2)}
-                                  </div>
+                                  <div className="text-sm text-white/85">${Number(priceDollars).toFixed(2)}</div>
 
                                   <div className="flex items-center gap-2">
                                     <Link
-                                      href={`/products/${p.slug}`}
+                                      href={`/shop/${p.slug}`}   // ✅ canonical
                                       className="text-xs text-white/70 hover:text-white underline underline-offset-4"
                                     >
                                       View
@@ -327,7 +319,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 </div>
               </aside>
 
-              {/* ✅ Thick divider between columns */}
+              {/* divider */}
               <div
                 aria-hidden="true"
                 className="hidden lg:block h-full"
@@ -339,22 +331,12 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 }}
               />
 
-              {/* RIGHT: Cart panel */}
+              {/* RIGHT: Cart */}
               <div
-                className={`
-                  h-full
-                  w-[380px] sm:w-[420px]
-                  bg-black/85 text-white shadow-xl
-                  flex flex-col
-                `}
-                style={{
-                  width: CART_W,
-                  borderLeft: "none", // divider now handles it
-                }}
+                className="h-full w-[380px] sm:w-[420px] bg-black/85 text-white shadow-xl flex flex-col"
+                style={{ width: CART_W, borderLeft: "none" }}
               >
-                {/* header */}
                 <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                  {/* ✅ make sure this matches Pairs Well With size */}
                   <h2 className="text-xl font-semibold leading-none">
                     <span className="text-[var(--brand-gold)]">Cart</span>
                   </h2>
@@ -368,7 +350,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   </button>
                 </div>
 
-                {/* subtle underline under Cart too (matches left) */}
                 <div
                   className="mx-4 h-[2px] w-20 rounded-full"
                   style={{
@@ -378,7 +359,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   }}
                 />
 
-                {/* content */}
                 <div className="px-4 pb-4 overflow-y-auto flex-1">
                   {!items.length ? (
                     <div className="mt-8 text-center text-gray-300">Your cart is empty.</div>
@@ -403,10 +383,10 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium truncate">
-  <span className="bg-gradient-to-r from-yellow-300 to-emerald-300 bg-clip-text text-transparent">
-    {it.name}
-  </span>
-</div>
+                                <span className="bg-gradient-to-r from-yellow-300 to-emerald-300 bg-clip-text text-transparent">
+                                  {it.name}
+                                </span>
+                              </div>
 
                               {it.variant && <div className="text-xs text-gray-400">Variant: {it.variant}</div>}
                               <div className="text-xs text-gray-400">{usd(it.priceCents)}</div>
@@ -453,47 +433,45 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 </div>
 
                 {/* footer */}
-<div className="px-4 py-6 relative">
-  {/* neon glow halo */}
-  <div
-    aria-hidden
-    className="absolute inset-x-4 bottom-6 h-14 rounded-full"
-    style={{
-      background:
-        "radial-gradient(circle at center, rgba(212,175,55,0.55), rgba(212,175,55,0.15), transparent 70%)",
-      filter: "blur(22px)",
-      zIndex: 0,
-    }}
-  />
+                <div className="px-4 py-6 relative">
+                  <div
+                    aria-hidden
+                    className="absolute inset-x-4 bottom-6 h-14 rounded-full"
+                    style={{
+                      background:
+                        "radial-gradient(circle at center, rgba(212,175,55,0.55), rgba(212,175,55,0.15), transparent 70%)",
+                      filter: "blur(22px)",
+                      zIndex: 0,
+                    }}
+                  />
 
-  <Link
-    href="/cart"
-    onClick={() => setOpen(false)}
-    className="
-      relative z-10
-      block w-full text-center rounded-full
-      font-semibold text-base
-      px-5 py-3
-      border border-black/70
-      transition
-      hover:-translate-y-[1px]
-      active:translate-y-0
-    "
-    style={{
-      background: GOLD,
-      color: "#000",
-      boxShadow: `
-        0 0 0 1px rgba(0,0,0,0.6),
-        0 10px 28px rgba(212,175,55,0.45),
-        0 0 60px rgba(212,175,55,0.55),
-        0 0 120px rgba(212,175,55,0.35)
-      `,
-    }}
-  >
-    Go to cart
-  </Link>
-</div>
-
+                  <Link
+                    href="/cart"
+                    onClick={() => setOpen(false)}
+                    className="
+                      relative z-10
+                      block w-full text-center rounded-full
+                      font-semibold text-base
+                      px-5 py-3
+                      border border-black/70
+                      transition
+                      hover:-translate-y-[1px]
+                      active:translate-y-0
+                    "
+                    style={{
+                      background: GOLD,
+                      color: "#000",
+                      boxShadow: `
+                        0 0 0 1px rgba(0,0,0,0.6),
+                        0 10px 28px rgba(212,175,55,0.45),
+                        0 0 60px rgba(212,175,55,0.55),
+                        0 0 120px rgba(212,175,55,0.35)
+                      `,
+                    }}
+                  >
+                    Go to cart
+                  </Link>
+                </div>
 
                 {typeof count === "number" && <span className="sr-only">Items in cart: {count}</span>}
               </div>
@@ -508,10 +486,12 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 function CartBadge() {
   const { count } = useCart();
   if (!count) return null;
+
   return (
     <span
       className="
-        absolute -top-1 -right-1 min-w-[18px] h-5 px-1
+        absolute -top-[7px] -right-[8px]
+        min-w-[18px] h-5 px-1
         rounded-full bg-gradient-to-r from-lime-300 to-green-500
         text-black text-xs font-semibold grid place-items-center
         border border-[var(--brand-gold)]

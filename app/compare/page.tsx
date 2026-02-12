@@ -23,7 +23,7 @@ export default function ComparePage({
 
   const selected = slugs
     .map((slug) =>
-      products.find((p) => String(p.slug).toLowerCase() === slug.toLowerCase())
+      (products as any[]).find((p) => String(p.slug).toLowerCase() === slug.toLowerCase())
     )
     .filter(Boolean) as any[];
 
@@ -40,7 +40,7 @@ export default function ComparePage({
         </div>
 
         <Link
-          href="/products"
+          href="/shop"
           className="btn-gold rounded-xl px-4 py-2 text-sm font-semibold border border-[var(--brand-gold)]"
         >
           Back to shop
@@ -54,7 +54,6 @@ export default function ComparePage({
           </p>
         </div>
       ) : (
-        // ✅ No wrapper frame here — CompareClient owns the smokey-glass + gold frame
         <CompareClient initial={selected} />
       )}
     </main>

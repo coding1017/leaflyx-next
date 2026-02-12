@@ -6,12 +6,10 @@ export type ProductLite = {
   slug: string;
   name: string;
 
-  // for rendering cards
-  image?: any; // string | StaticImageData (we’ll treat it loosely)
-  price?: number; // base price
+  image?: any;
+  price?: number;
   variants?: { price?: number; isPopular?: boolean }[] | null;
 
-  // existing scoring inputs
   category?: string | null;
   subcategories?: string[] | null;
   potency?: string | null;
@@ -56,10 +54,6 @@ function getProductLite(p: any): ProductLite {
   };
 }
 
-/** ✅ display price for recommendation cards
- * - If variants exist: show the minimum variant price (“From $X”)
- * - Else: show base product.price
- */
 export function getRecommendationDisplayPrice(p: ProductLite): { from: boolean; price: number } {
   const vs = p.variants ?? null;
   if (vs && vs.length) {
@@ -67,9 +61,7 @@ export function getRecommendationDisplayPrice(p: ProductLite): { from: boolean; 
       .map((v) => Number(v?.price ?? NaN))
       .filter((n) => Number.isFinite(n) && n > 0);
 
-    if (prices.length) {
-      return { from: true, price: Math.min(...prices) };
-    }
+    if (prices.length) return { from: true, price: Math.min(...prices) };
   }
 
   const base = Number(p.price ?? NaN);

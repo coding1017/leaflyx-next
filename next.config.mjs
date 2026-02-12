@@ -13,10 +13,11 @@ const nextConfig = {
     unoptimized: true,
 
     /**
-     * ✅ If you ever switch unoptimized back off, these prevent 400s from remote URLs.
-     * Add/adjust hostnames if you use a CDN or storage host.
+     * ✅ Remote allow list (kept broad because you're currently unoptimized anyway)
+     * Includes Vercel Blob public host pattern for when you later turn unoptimized off.
      */
     remotePatterns: [
+      { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
       { protocol: "https", hostname: "**" },
       { protocol: "http", hostname: "localhost" },
     ],
