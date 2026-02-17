@@ -1,15 +1,19 @@
 // lib/admin-guard.ts
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/authOptions";
+import { unstable_noStore as noStore } from "next/cache";
 
 /**
  * Admin gate (session-only).
- * Allows access ONLY if the signed-in user has role === "SUPER_ADMIN".
+ * Allows access ONLY if the signed-in user has role === "ADMIN".
  *
  * Use in any admin API route:
  *   await assertAdmin();
  */
 export async function assertAdmin() {
+  // ✅ Prevent any caching of admin-protected logic
+  noStore();
+
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
@@ -18,11 +22,6 @@ export async function assertAdmin() {
 
   const role = (session.user as any)?.role;
   if (role !== "ADMIN") throw new Error("FORBIDDEN");
-  forceNoStore();
-  return true;
-}
 
-// Prevent any accidental caching of admin-protected responses
-function forceNoStore() {
-  // no-op helper; routes should set headers if needed
+  return true;
 }

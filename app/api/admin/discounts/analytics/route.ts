@@ -1,7 +1,16 @@
 // app/api/admin/discounts/analytics/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { assertAdmin } from "@/lib/admin-guard";
+import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
+
+function toHttpStatus(e: any) {
+  const msg = String(e?.message || "");
+  if (msg === "UNAUTHORIZED") return 401;
+  if (msg === "FORBIDDEN") return 403;
+  return 500;
+}
 
 export async function GET() {
   try {
@@ -20,7 +29,6 @@ export async function GET() {
       },
     });
 
-    // aggregate by codeSnapshot
     const byCode: Record<
       string,
       {
@@ -29,7 +37,7 @@ export async function GET() {
         subtotalCents: number;
         discountCents: number;
         totalCents: number;
-        topItems: Record<string, number>; // name -> qty
+        topItems: Record<string, number>;
         lastUsedAt: string | null;
       }
     > = {};
@@ -53,13 +61,11 @@ export async function GET() {
       bucket.subtotalCents += r.subtotalCents;
       bucket.discountCents += r.discountCents;
       bucket.totalCents += r.totalCents;
-      bucket.lastUsedAt = bucket.lastUsedAt ?? r.createdAt.toISOString();
-      // keep most recent
-      if (r.createdAt.toISOString() > (bucket.lastUsedAt ?? "")) {
-        bucket.lastUsedAt = r.createdAt.toISOString();
-      }
 
-      const items = (r.itemsJson as any[]) ?? [];
+      const iso = r.createdAt.toISOString();
+      bucket.lastUsedAt = bucket.lastUsedAt ? (iso > bucket.lastUsedAt ? iso : bucket.lastUsedAt) : iso;
+
+      const items = ((r.itemsJson as any[]) ?? []) as any[];
       for (const it of items) {
         const name = String(it?.name ?? "Unknown");
         const qty = Number(it?.qty ?? 0);
@@ -84,11 +90,10 @@ export async function GET() {
       };
     });
 
-    // order by total revenue
     summary.sort((a, b) => b.totalCents - a.totalCents);
 
     return NextResponse.json({ ok: true, summary });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "Forbidden" }, { status: toHttpStatus(e) });
   }
 }

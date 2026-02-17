@@ -1,14 +1,19 @@
 // app/api/admin/inventory/route.ts
 import { NextResponse } from "next/server";
+import { assertAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 import { getCatalogProducts } from "@/lib/catalog.server";
 
+export const runtime = "nodejs";
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-function requireAdmin(req: Request) {
-  const token = req.headers.get("x-admin-token");
-  return !!process.env.ADMIN_TOKEN && token === process.env.ADMIN_TOKEN;
+function toHttpStatus(e: any) {
+  const msg = String(e?.message || "");
+  if (msg === "UNAUTHORIZED") return 401;
+  if (msg === "FORBIDDEN") return 403;
+  return 500;
 }
 
 function canon(v: string | null | undefined) {
@@ -115,6 +120,10 @@ async function upsertInventoryQty(productId: string, variant: string | null, qty
   return { prevQty: 0, nextQty: created.qty, created: true };
 }
 
+function emailFromEnv() {
+  return process.env.RESEND_FROM || process.env.EMAIL_FROM || "Leaflyx <onboarding@resend.dev>";
+}
+
 async function sendRestockEmails(args: {
   productId: string;
   variant: string | null;
@@ -133,7 +142,7 @@ async function sendRestockEmails(args: {
     return { matched: 0, emailed: 0, sendErrors: 0, deleted: 0 };
   }
 
-  const siteUrl = process.env.SITE_URL || "http://localhost:3000";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL || "http://localhost:3000";
   const href = buildProductHref(slug, variant) ?? "/shop";
   const url = `${siteUrl}${href}`;
 
@@ -149,10 +158,7 @@ async function sendRestockEmails(args: {
   for (const m of matched) {
     try {
       await resend.emails.send({
-        from:
-          process.env.RESEND_FROM ||
-          process.env.EMAIL_FROM ||
-          "Leaflyx <onboarding@resend.dev>",
+        from: emailFromEnv(),
         to: m.email,
         subject,
         html: `
@@ -233,11 +239,9 @@ async function createMissingRowsForCatalog(catalog: any[], onlyProductId?: strin
   return { created, scannedProducts: list.length, reason: null };
 }
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
-    if (!requireAdmin(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const catalog = await getCatalogProducts();
 
@@ -303,15 +307,13 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ok: true, rows });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: toHttpStatus(e) });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!requireAdmin(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const catalog = await getCatalogProducts();
     const body = await req.json().catch(() => ({} as any));
@@ -357,9 +359,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "Missing productId" }, { status: 400 });
     }
 
-    const p = (catalog as any[]).find(
-      (x) => String(x?.id).toLowerCase() === productId.toLowerCase()
-    );
+    const p = (catalog as any[]).find((x) => String(x?.id).toLowerCase() === productId.toLowerCase());
 
     const productName = p?.name ? String(p.name) : productId;
     const slug = p?.slug ? String(p.slug) : null;
@@ -449,6 +449,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message ?? "Failed" }, { status: toHttpStatus(e) });
   }
 }

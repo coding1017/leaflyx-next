@@ -815,49 +815,52 @@ export function ProductGrid({
     return typeof limit === "number" ? out.slice(0, limit) : out;
   }, [filteredBase, sortKey, sortOrder, limit, inventoryMap]);
 
+const gridReviewSlugKey = useMemo(() => {
+  const slugs = Array.from(
+    new Set(groupedSorted.map((p: any) => String(p?.slug ?? "").trim()).filter(Boolean))
+  );
+  slugs.sort();
+  return slugs.join(",");
+}, [groupedSorted]);
+
+
   // ✅ Fetch review summaries ONCE for the current grid products
-  useEffect(() => {
-    const slugs = Array.from(
-      new Set(groupedSorted.map((p: any) => String(p?.slug ?? "").trim()).filter(Boolean))
-    );
+useEffect(() => {
+  const slugs = gridReviewSlugKey ? gridReviewSlugKey.split(",") : [];
 
-    // Nothing to fetch
-    if (!slugs.length) {
-      setReviewsDegraded(false);
-      return;
-    }
+  if (!slugs.length) {
+    setReviewsDegraded(false);
+    return;
+  }
 
-    // Cancel in-flight
-    summaryAbortRef.current?.abort();
-    const ac = new AbortController();
-    summaryAbortRef.current = ac;
+  summaryAbortRef.current?.abort();
+  const ac = new AbortController();
+  summaryAbortRef.current = ac;
 
-    (async () => {
-      try {
-        const url = buildSummaryUrl(slugs);
-        const r = await fetch(url, { cache: "no-store", signal: ac.signal });
-        if (!r.ok) throw new Error(`summary ${r.status}`);
-        const j = (await r.json()) as SummaryResponse;
+  (async () => {
+    try {
+      const url = buildSummaryUrl(slugs);
+      const r = await fetch(url, { cache: "no-store", signal: ac.signal });
+      if (!r.ok) throw new Error(`summary ${r.status}`);
+      const j = (await r.json()) as SummaryResponse;
 
-        // If degraded, KEEP whatever we already have (prevents flicker)
-        if (j?.degraded) {
-          setReviewsDegraded(true);
-          return;
-        }
-
-        if (j?.data && typeof j.data === "object") {
-          setReviewMap((prev) => ({ ...prev, ...j.data })); // merge so we keep older slugs too
-        }
-        setReviewsDegraded(false);
-      } catch (e: any) {
-        // ignore abort; keep last good map so UI stays stable
-        if (e?.name === "AbortError") return;
+      if (j?.degraded) {
         setReviewsDegraded(true);
+        return;
       }
-    })();
 
-    return () => ac.abort();
-  }, [groupedSorted]);
+      if (j?.data && typeof j.data === "object") {
+        setReviewMap((prev) => ({ ...prev, ...j.data }));
+      }
+      setReviewsDegraded(false);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setReviewsDegraded(true);
+    }
+  })();
+
+  return () => ac.abort();
+}, [gridReviewSlugKey]); // ✅ stable, stops spam
 
   const sortOptions = useMemo(
     () => [

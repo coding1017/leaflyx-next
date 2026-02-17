@@ -2,13 +2,9 @@
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { assertAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/prisma";
 import { put } from "@vercel/blob";
-
-function authed(req: Request) {
-  const token = req.headers.get("x-admin-token") || "";
-  return !!process.env.ADMIN_TOKEN && token === process.env.ADMIN_TOKEN;
-}
 
 function str(v: unknown) {
   return String(v ?? "").trim();
@@ -70,11 +66,20 @@ async function findProductByOne(oneRaw: string) {
   return bySlug;
 }
 
+function toHttpStatus(e: any) {
+  const msg = String(e?.message || "");
+  if (msg === "UNAUTHORIZED") return 401;
+  if (msg === "FORBIDDEN") return 403;
+  return 500;
+}
+
+function toErrMsg(e: any, fallback = "Failed") {
+  return String(e?.message || fallback);
+}
+
 export async function GET(req: Request) {
   try {
-    if (!authed(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const url = new URL(req.url);
     const one = str(url.searchParams.get("one"));
@@ -102,15 +107,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ ok: true, products });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Failed" }, { status: 500 });
+    const status = toHttpStatus(e);
+    return NextResponse.json({ ok: false, error: toErrMsg(e) }, { status });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!authed(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const fd = await req.formData();
 
@@ -162,7 +166,10 @@ export async function POST(req: Request) {
     let imageUrls: string[] = [];
 
     if (imageFile && typeof imageFile !== "string") {
-      imageUrl = await uploadToBlob(imageFile as File, blobPath("thumb", slug, (imageFile as File).name));
+      imageUrl = await uploadToBlob(
+        imageFile as File,
+        blobPath("thumb", slug, (imageFile as File).name)
+      );
     } else if (typeof imageFile === "string" && imageFile.trim()) {
       imageUrl = imageFile.trim();
     }
@@ -233,15 +240,14 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, created });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error creating product" }, { status: 500 });
+    const status = toHttpStatus(e);
+    return NextResponse.json({ ok: false, error: toErrMsg(e, "Error creating product") }, { status });
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    if (!authed(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const fd = await req.formData();
     const one = str(fd.get("one"));
@@ -294,10 +300,15 @@ export async function PUT(req: Request) {
     const galleryFiles = fd.getAll("images");
 
     let nextImageUrl: string | null = (existing as any).imageUrl ?? null;
-    let nextImageUrls: string[] = Array.isArray((existing as any).imageUrls) ? (existing as any).imageUrls : [];
+    let nextImageUrls: string[] = Array.isArray((existing as any).imageUrls)
+      ? (existing as any).imageUrls
+      : [];
 
     if (imageFile && typeof imageFile !== "string") {
-      nextImageUrl = await uploadToBlob(imageFile as File, blobPath("thumb", slug, (imageFile as File).name));
+      nextImageUrl = await uploadToBlob(
+        imageFile as File,
+        blobPath("thumb", slug, (imageFile as File).name)
+      );
     } else if (typeof imageFile === "string" && imageFile.trim()) {
       nextImageUrl = imageFile.trim();
     }
@@ -371,15 +382,14 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ ok: true, updated });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Save failed" }, { status: 500 });
+    const status = toHttpStatus(e);
+    return NextResponse.json({ ok: false, error: toErrMsg(e, "Save failed") }, { status });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    if (!authed(req)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+    await assertAdmin();
 
     const url = new URL(req.url);
     const one = str(url.searchParams.get("one"));
@@ -399,6 +409,7 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Delete failed" }, { status: 500 });
+    const status = toHttpStatus(e);
+    return NextResponse.json({ ok: false, error: toErrMsg(e, "Delete failed") }, { status });
   }
 }

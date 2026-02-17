@@ -1,13 +1,10 @@
+// app/api/admin/products/[idOrSlug]/route.ts
 export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
+import { assertAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/prisma";
 import { put } from "@vercel/blob";
-
-function authed(req: Request) {
-  const token = req.headers.get("x-admin-token") || "";
-  return !!process.env.ADMIN_TOKEN && token === process.env.ADMIN_TOKEN;
-}
 
 function lower(x: any) {
   return String(x ?? "").trim().toLowerCase();
@@ -22,7 +19,18 @@ function safeSlug(x: string) {
     .replace(/^\-|\-$/g, "");
 }
 
+function toHttpStatus(e: any) {
+  const msg = String(e?.message || "");
+  if (msg === "UNAUTHORIZED") return 401;
+  if (msg === "FORBIDDEN") return 403;
+  return 500;
+}
+
 async function uploadImageToBlob(file: File, keyPrefix: string) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error("Missing BLOB_READ_WRITE_TOKEN (required for image uploads).");
+  }
+
   const name = String((file as any).name || "image");
   const ext = name.includes(".") ? "." + name.split(".").pop() : "";
   const key = `${keyPrefix}/${crypto.randomUUID()}${ext}`;
@@ -44,47 +52,42 @@ async function findProduct(idOrSlug: string) {
   });
 }
 
-export async function GET(req: Request, { params }: { params: { idOrSlug: string } }) {
+export async function GET(_req: Request, { params }: { params: { idOrSlug: string } }) {
   try {
-    if (!authed(req)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    await assertAdmin();
 
     const product = await findProduct(params.idOrSlug);
     if (!product) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
     return NextResponse.json({ ok: true, product });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: toHttpStatus(e) });
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { idOrSlug: string } }) {
+export async function DELETE(_req: Request, { params }: { params: { idOrSlug: string } }) {
   try {
-    if (!authed(req)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    await assertAdmin();
 
     const product = await findProduct(params.idOrSlug);
     if (!product) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
 
     await prisma.$transaction(async (tx) => {
-      // delete inventory rows for this product
       await tx.inventory.deleteMany({ where: { productId: product.id } });
-
-      // delete variants
       await tx.catalogVariant.deleteMany({ where: { productId: product.id } });
-
-      // delete product
       await tx.catalogProduct.delete({ where: { id: product.id } });
     });
 
-    // NOTE: we are not deleting blob files here (URLs will just become orphaned).
+    // NOTE: blob files are not deleted (URLs may become orphaned).
     return NextResponse.json({ ok: true });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: toHttpStatus(e) });
   }
 }
 
 export async function PUT(req: Request, { params }: { params: { idOrSlug: string } }) {
   try {
-    if (!authed(req)) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    await assertAdmin();
 
     const existing = await findProduct(params.idOrSlug);
     if (!existing) return NextResponse.json({ ok: false, error: "Not found" }, { status: 404 });
@@ -102,7 +105,7 @@ export async function PUT(req: Request, { params }: { params: { idOrSlug: string
     const potency = String(fd.get("potency") ?? "").trim();
     const badge = String(fd.get("badge") ?? "").trim();
     const coaUrl = String(fd.get("coaUrl") ?? "").trim();
-    const active = String(fd.get("active") ?? String(!!existing.active)) === "true";
+    const active = String(fd.get("active") ?? String(!!(existing as any).active)) === "true";
 
     // variantsJson = [{id,label,grams,price,isPopular}]
     const variantsJson = String(fd.get("variantsJson") || "[]");
@@ -120,12 +123,14 @@ export async function PUT(req: Request, { params }: { params: { idOrSlug: string
     if (imageFile && imageFile instanceof File && imageFile.size > 0) {
       imageUrl = await uploadImageToBlob(imageFile, `${keyPrefix}/thumb`);
     }
+
     for (const f of galleryFiles) {
       if (f instanceof File && f.size > 0) {
         const url = await uploadImageToBlob(f, `${keyPrefix}/gallery`);
         imageUrls = [...imageUrls, url];
       }
     }
+
     if (!imageUrl && imageUrls.length) imageUrl = imageUrls[0];
 
     // parse variantsJson safely
@@ -138,17 +143,13 @@ export async function PUT(req: Request, { params }: { params: { idOrSlug: string
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      // 1) update product (including id)
-      // If you change ID, we need to update children too.
       const changingId = id !== existing.id;
 
       if (changingId) {
-        // update children first to new productId
         await tx.inventory.updateMany({ where: { productId: existing.id }, data: { productId: id } });
         await tx.catalogVariant.updateMany({ where: { productId: existing.id }, data: { productId: id } });
       }
 
-      // update product row
       const p = await tx.catalogProduct.update({
         where: { id: changingId ? id : existing.id },
         data: {
@@ -167,7 +168,7 @@ export async function PUT(req: Request, { params }: { params: { idOrSlug: string
         } as any,
       });
 
-      // 2) replace variants (simple + reliable)
+      // Replace variants
       await tx.catalogVariant.deleteMany({ where: { productId: id } });
 
       if (variants.length) {
@@ -182,16 +183,16 @@ export async function PUT(req: Request, { params }: { params: { idOrSlug: string
               isPopular: !!v?.isPopular,
             }))
             .filter((v) => v.id.length > 0) as any,
+          skipDuplicates: true,
         });
       }
 
-      // NOTE: we are not auto-rebuilding inventory rows here because you already have
-      // inventory tooling; you can keep inventory management in /admin/inventory.
+      // Inventory remains managed in /admin/inventory (no auto rebuild here).
       return p;
     });
 
     return NextResponse.json({ ok: true, updated });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e?.message || "Error" }, { status: toHttpStatus(e) });
   }
 }
