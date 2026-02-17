@@ -4,7 +4,15 @@
 import AnnouncementBar from "./AnnouncementBar";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import { ShoppingCart, User, LogOut, Package, SlidersHorizontal } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  LogOut,
+  Package,
+  SlidersHorizontal,
+  Menu,
+  X,
+} from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
@@ -115,19 +123,41 @@ export function Header() {
     [session?.user]
   );
 
-  // Dropdown state
+  // Dropdown state (desktop avatar menu)
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ Mobile panel state
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobilePanelRef = useRef<HTMLDivElement | null>(null);
+
+  // Close menus on route change
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setMobileOpen(false);
+      }
     }
     function onClickOutside(e: MouseEvent) {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      const t = e.target as Node;
+
+      if (menuOpen && menuRef.current && !menuRef.current.contains(t)) {
+        setMenuOpen(false);
+      }
+      if (mobileOpen && mobilePanelRef.current && !mobilePanelRef.current.contains(t)) {
+        // only close if clicking outside the panel area (not the header buttons)
+        // This keeps taps feeling normal.
+        setMobileOpen(false);
+      }
     }
-    if (menuOpen) {
+
+    if (menuOpen || mobileOpen) {
       window.addEventListener("keydown", onKey);
       window.addEventListener("mousedown", onClickOutside);
     }
@@ -135,7 +165,7 @@ export function Header() {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onClickOutside);
     };
-  }, [menuOpen]);
+  }, [menuOpen, mobileOpen]);
 
   // Shared styles
   const pill =
@@ -168,13 +198,24 @@ export function Header() {
     return pathname.startsWith(href);
   };
 
-  const NavLink = ({ href, label }: { href: string; label: string }) => {
+  const NavLink = ({
+    href,
+    label,
+    onClick,
+    className,
+  }: {
+    href: string;
+    label: string;
+    onClick?: () => void;
+    className?: string;
+  }) => {
     const active = isActive(href);
     return (
       <Link
         href={href}
+        onClick={onClick}
         aria-current={active ? "page" : undefined}
-        className={`${pill} ${active ? activeGlow : ""}`}
+        className={`${pill} ${active ? activeGlow : ""} ${className ?? ""}`}
       >
         <span className={gradientText}>{label}</span>
       </Link>
@@ -183,6 +224,7 @@ export function Header() {
 
   async function doSignOut() {
     setMenuOpen(false);
+    setMobileOpen(false);
     await signOut({ callbackUrl: "/" });
   }
 
@@ -309,6 +351,21 @@ export function Header() {
 
             {/* Right cluster */}
             <div className="ml-auto flex items-center" style={{ gap: `${tuner.rightGap}px` }}>
+              {/* ✅ Mobile hamburger (only on mobile) */}
+              <button
+                type="button"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
+                className={`${pill} md:hidden relative shrink-0 !px-2 ${mobileOpen ? activeGlow : ""}`}
+              >
+                {mobileOpen ? (
+                  <X className="h-5 w-5 text-white/90" />
+                ) : (
+                  <Menu className="h-5 w-5 text-white/90" />
+                )}
+              </button>
+
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -330,7 +387,7 @@ export function Header() {
                 </div>
               ) : null}
 
-              {/* ✅ Profile Dropdown */}
+              {/* ✅ Profile Dropdown (desktop + mobile icon stays) */}
               <div
                 ref={menuRef}
                 className="relative"
@@ -462,6 +519,72 @@ export function Header() {
                   );
                 }}
               </MiniCart>
+            </div>
+          </div>
+
+          {/* ✅ Mobile panel (nav + search) */}
+          <div
+            className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}
+          >
+            <div
+              ref={mobilePanelRef}
+              className="
+                mt-2 rounded-3xl border border-[#d4af37]/50
+                bg-black/55 backdrop-blur-md
+                shadow-[0_18px_80px_rgba(0,0,0,0.55)]
+                overflow-hidden
+              "
+            >
+              {/* Mobile Search */}
+              <div className="p-3 border-b border-white/10">
+                <div className="relative" role="search" aria-label="Mobile site search">
+                  <HeaderSearch
+                    placeholder="Search products…"
+                    searchRouteBase="/search"
+                    productRouteBase="/shop"
+                  />
+                </div>
+                <div className="mt-2 text-[11px] text-white/55">
+                  Tip: search works great on mobile — products open in the same premium /shop view.
+                </div>
+              </div>
+
+              {/* Mobile Links */}
+              <div className="p-3 flex flex-wrap gap-2">
+                {/* Use same active logic as desktop */}
+                <NavLink href="/products" label="Shop" onClick={() => setMobileOpen(false)} className="!px-6" />
+                <NavLink href="/about" label="About" onClick={() => setMobileOpen(false)} />
+                <NavLink href="/faq" label="FAQ" onClick={() => setMobileOpen(false)} />
+                <NavLink href="/coa" label="COA" onClick={() => setMobileOpen(false)} />
+
+                {authed ? (
+                  <>
+                    <Link
+                      href="/account"
+                      onClick={() => setMobileOpen(false)}
+                      className={`${pill} ${isActive("/account") ? activeGlow : ""}`}
+                    >
+                      <span className={gradientText}>Account</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={doSignOut}
+                      className={`${pill} border border-white/10`}
+                    >
+                      <span className={gradientText}>Sign out</span>
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    href="/sign-in"
+                    onClick={() => setMobileOpen(false)}
+                    className={`${pill} border border-white/10`}
+                  >
+                    <span className={gradientText}>Sign in</span>
+                  </Link>
+                )}
+              </div>
             </div>
           </div>
         </div>
