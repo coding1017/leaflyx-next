@@ -40,7 +40,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
   useEffect(() => {
     if (!open) return;
-
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
 
@@ -88,7 +87,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
     );
   }
 
-  // ---- Recommendations (Pairs well) ----
+  // ---- Recommendations ----
   const lastCartItem = useMemo(() => {
     if (!Array.isArray(items) || !items.length) return null;
     return items[items.length - 1] ?? null;
@@ -140,7 +139,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
   if (!mounted) return trigger;
 
   const REC_W = 320;
-  const CART_W = 420;
   const DIVIDER_W = 3;
 
   return (
@@ -166,12 +164,9 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
               `}
               style={{ gap: 0 }}
             >
-              {/* LEFT: Pairs well (desktop only, unchanged) */}
+              {/* Desktop-only rec sidebar */}
               <aside
-                className={`
-                  hidden lg:flex h-full
-                  border-l bg-black/70 text-white flex-col
-                `}
+                className="hidden lg:flex h-full border-l bg-black/70 text-white flex-col"
                 style={{
                   width: REC_W,
                   borderColor: GOLD,
@@ -180,36 +175,22 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 }}
               >
                 <div className="px-4 pt-4 pb-2">
-                  <div className="flex items-end justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-semibold leading-none">
-                        <span className="bg-gradient-to-r from-emerald-200 to-yellow-200 bg-clip-text text-transparent">
-                          Pairs Well With
-                        </span>
-                      </h3>
-
-                      <div
-                        className="mt-2 h-[2px] w-32 rounded-full"
-                        style={{
-                          background:
-                            "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                          opacity: 0.9,
-                        }}
-                      />
-                    </div>
-
-                    {lastCartItem?.name ? (
-                      <div className="text-xs text-white/55 truncate max-w-[140px]">
-                        Based on: <span className="text-white/75">{lastCartItem.name}</span>
-                      </div>
-                    ) : null}
-                  </div>
+                  <h3 className="text-xl font-semibold leading-none">
+                    <span className="bg-gradient-to-r from-emerald-200 to-yellow-200 bg-clip-text text-transparent">
+                      Pairs Well With
+                    </span>
+                  </h3>
+                  <div
+                    className="mt-2 h-[2px] w-32 rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                      opacity: 0.9,
+                    }}
+                  />
                 </div>
 
-                <div
-                  className="px-4 pb-4 overflow-y-auto flex-1 overscroll-contain"
-                  style={{ WebkitOverflowScrolling: "touch" as any }}
-                >
+                <div className="px-4 pb-4 overflow-y-auto flex-1 overscroll-contain" style={{ WebkitOverflowScrolling: "touch" as any }}>
                   {!pairsWell.length ? (
                     <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
                       Add an item to your cart to see suggestions.
@@ -233,10 +214,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                             <div className="flex gap-3 p-3">
                               <div
                                 className="relative w-[76px] h-[76px] rounded-xl overflow-hidden shrink-0"
-                                style={{
-                                  border: `2px solid ${GOLD}`,
-                                  backgroundColor: "#000",
-                                }}
+                                style={{ border: `2px solid ${GOLD}`, backgroundColor: "#000" }}
                               >
                                 <Image src={srcOf(p.image)} alt={p.name} fill className="object-cover" sizes="76px" />
                               </div>
@@ -248,56 +226,25 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                   </span>
                                 </div>
 
-                                <div className="mt-1 flex items-center gap-2 text-xs text-white/70">
-                                  <span
-                                    className="rounded-full px-2 py-[2px]"
-                                    style={{
-                                      border: `1px solid ${GOLD}`,
-                                      background: "rgba(0,0,0,0.5)",
-                                      color: GOLD,
-                                    }}
-                                  >
-                                    {p.category ?? "Premium"}
-                                  </span>
-
-                                  {chosenVariant?.label ? (
-                                    <span className="text-white/60">• {chosenVariant.label}</span>
-                                  ) : null}
-                                </div>
-
                                 <div className="mt-2 flex items-center justify-between gap-3">
                                   <div className="text-sm text-white/85">${Number(priceDollars).toFixed(2)}</div>
-
-                                  <div className="flex items-center gap-2">
-                                    <Link
-                                      href={`/shop/${p.slug}`}
-                                      className="text-xs text-white/70 hover:text-white underline underline-offset-4"
-                                    >
-                                      View
-                                    </Link>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => addRecommendedToCart(p)}
-                                      disabled={!canAddFromRec}
-                                      className={`
-                                        inline-flex items-center gap-2
-                                        rounded-full px-3 py-1.5 text-xs font-semibold
-                                        transition
-                                        ${canAddFromRec ? "" : "opacity-60 cursor-not-allowed"}
-                                      `}
-                                      style={{
-                                        background: GOLD,
-                                        color: "#000",
-                                        border: `1px solid rgba(0,0,0,0.65)`,
-                                        boxShadow: "0 10px 26px rgba(212,175,55,0.22)",
-                                      }}
-                                      aria-label={`Add ${p.name} to cart`}
-                                    >
-                                      <Plus className="w-4 h-4" />
-                                      Add
-                                    </button>
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => addRecommendedToCart(p)}
+                                    disabled={!canAddFromRec}
+                                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                      canAddFromRec ? "" : "opacity-60 cursor-not-allowed"
+                                    }`}
+                                    style={{
+                                      background: GOLD,
+                                      color: "#000",
+                                      border: `1px solid rgba(0,0,0,0.65)`,
+                                      boxShadow: "0 10px 26px rgba(212,175,55,0.22)",
+                                    }}
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                    Add
+                                  </button>
                                 </div>
                               </div>
                             </div>
@@ -317,7 +264,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 </div>
               </aside>
 
-              {/* divider */}
               <div
                 aria-hidden="true"
                 className="hidden lg:block h-full"
@@ -329,21 +275,21 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 }}
               />
 
-              {/* RIGHT: Cart */}
+              {/* ✅ Cart panel: width is min(420px, 100vw) so nothing gets cut off */}
               <div
-                className="h-[100dvh] w-[92vw] sm:w-[420px] bg-black/85 text-white shadow-xl flex flex-col"
-                style={{ width: CART_W, borderLeft: "none", paddingBottom: "env(safe-area-inset-bottom)" as any }}
+                className="h-[100dvh] bg-black/85 text-white shadow-xl flex flex-col"
+                style={{
+                  width: "min(420px, 100vw)",
+                  maxWidth: "100vw",
+                  paddingBottom: "env(safe-area-inset-bottom)" as any,
+                }}
               >
                 <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                   <h2 className="text-xl font-semibold leading-none">
                     <span className="text-[var(--brand-gold)]">Cart</span>
                   </h2>
 
-                  <button
-                    aria-label="Close cart"
-                    className="rounded-full p-1 hover:bg-white/10"
-                    onClick={() => setOpen(false)}
-                  >
+                  <button aria-label="Close cart" className="rounded-full p-1 hover:bg-white/10" onClick={() => setOpen(false)}>
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -357,7 +303,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   }}
                 />
 
-                {/* ✅ Scroll area (fix iPhone cutoff) */}
+                {/* Scroll area */}
                 <div
                   className="px-4 overflow-y-auto flex-1 overscroll-contain pt-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))]"
                   style={{ WebkitOverflowScrolling: "touch" as any }}
@@ -412,10 +358,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                   +
                                 </button>
 
-                                <button
-                                  className="ml-2 text-xs text-red-300 hover:text-red-200"
-                                  onClick={() => remove(it.id, it.variant)}
-                                >
+                                <button className="ml-2 text-xs text-red-300 hover:text-red-200" onClick={() => remove(it.id, it.variant)}>
                                   Remove
                                 </button>
                               </div>
@@ -431,7 +374,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                         <div className="text-lg font-semibold">{usd(subtotalCents)}</div>
                       </div>
 
-                      {/* ✅ Mobile Pairs Well With (so you can see it on phone) */}
+                      {/* Mobile Pairs Well */}
                       <div className="lg:hidden mt-5">
                         <div className="flex items-end justify-between gap-3">
                           <div className="min-w-0">
@@ -498,10 +441,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                       </div>
 
                                       <div className="mt-2 flex items-center justify-between gap-2">
-                                        <Link
-                                          href={`/shop/${p.slug}`}
-                                          className="text-xs text-white/70 hover:text-white underline underline-offset-4"
-                                        >
+                                        <Link href={`/shop/${p.slug}`} className="text-xs text-white/70 hover:text-white underline underline-offset-4">
                                           View
                                         </Link>
                                         <button
@@ -517,7 +457,6 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                             border: `1px solid rgba(0,0,0,0.65)`,
                                             boxShadow: "0 10px 26px rgba(212,175,55,0.22)",
                                           }}
-                                          aria-label={`Add ${p.name} to cart`}
                                         >
                                           <Plus className="w-4 h-4" />
                                           Add
@@ -542,7 +481,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   )}
                 </div>
 
-                {/* Footer (safe-area friendly) */}
+                {/* Footer */}
                 <div className="px-4 py-6 relative pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
                   <div
                     aria-hidden

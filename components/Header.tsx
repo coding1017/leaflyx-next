@@ -4,7 +4,15 @@
 import AnnouncementBar from "./AnnouncementBar";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import { ShoppingCart, User, LogOut, Package, SlidersHorizontal, Menu, X } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  LogOut,
+  Package,
+  SlidersHorizontal,
+  Menu,
+  X,
+} from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
@@ -14,7 +22,6 @@ import { useSession, signOut } from "next-auth/react";
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
 import { useHeaderLayoutTuner } from "./header/useHeaderLayoutTuner";
 
-// ✅ Amazon-style search dropdown component
 import HeaderSearch from "@/components/HeaderSearch";
 
 function initialsFrom(name?: string | null, email?: string | null) {
@@ -26,21 +33,16 @@ function initialsFrom(name?: string | null, email?: string | null) {
   return (a + b).toUpperCase();
 }
 
-/**
- * Amazon-style progressive header:
- * - after `minY`, the header translates by the *exact scroll delta* (pixel-perfect)
- * - clamps so `peekPx` remains visible when fully "hidden"
- */
 function useProgressiveHeader(opts: {
   minY: number;
-  headerH: number; // measured header height
-  peekPx: number; // pixels that remain visible when fully hidden
-  jitterPx?: number; // ignore tiny scroll jitter (trackpads)
+  headerH: number;
+  peekPx: number;
+  jitterPx?: number;
 }) {
   const { minY, headerH, peekPx, jitterPx = 2 } = opts;
 
-  const maxHide = Math.max(0, headerH - peekPx); // px the header can slide up
-  const [offset, setOffset] = useState(0); // 0..maxHide
+  const maxHide = Math.max(0, headerH - peekPx);
+  const [offset, setOffset] = useState(0);
 
   const lastYRef = useRef(0);
   const tickingRef = useRef(false);
@@ -60,7 +62,7 @@ function useProgressiveHeader(opts: {
 
       requestAnimationFrame(() => {
         const lastY = lastYRef.current;
-        const diff = y - lastY; // + down, - up
+        const diff = y - lastY;
 
         if (Math.abs(diff) < jitterPx) {
           lastYRef.current = y;
@@ -110,17 +112,20 @@ export function Header() {
     [session?.user]
   );
 
-  // Desktop avatar dropdown
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Mobile hamburger panel
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ Search Focus Mode (mobile)
+  const [searchFocus, setSearchFocus] = useState(false);
+  const blurTimer = useRef<any>(null);
 
   useEffect(() => {
     setMenuOpen(false);
     setMobileOpen(false);
+    setSearchFocus(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -128,6 +133,7 @@ export function Header() {
       if (e.key === "Escape") {
         setMenuOpen(false);
         setMobileOpen(false);
+        setSearchFocus(false);
       }
     }
     function onClickOutside(e: MouseEvent) {
@@ -161,6 +167,9 @@ export function Header() {
     "ring-2 ring-yellow-300/60 shadow-[0_0_24px_#facc15,0_0_48px_#facc15,0_0_72px_rgba(250,204,21,0.6)]";
   const subtleGlow =
     "ring-1 ring-yellow-300/35 shadow-[0_0_18px_rgba(250,204,21,0.28),0_0_36px_rgba(250,204,21,0.22)]";
+
+  const hamburgerGlowOpen =
+    "ring-2 ring-yellow-300/70 shadow-[0_0_24px_#facc15,0_0_60px_rgba(250,204,21,0.55)]";
 
   const isActive = (href: string) => {
     if (!pathname) return false;
@@ -198,14 +207,13 @@ export function Header() {
   async function doSignOut() {
     setMenuOpen(false);
     setMobileOpen(false);
+    setSearchFocus(false);
     await signOut({ callbackUrl: "/" });
   }
 
-  // ✅ Header tuner
   const { tuner, clampPatch, reset } = useHeaderLayoutTuner();
   const [tuneOpen, setTuneOpen] = useState(false);
 
-  // Measure header height for spacer (AnnouncementBar included)
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
 
@@ -229,23 +237,38 @@ export function Header() {
     };
   }, []);
 
-  const PEEK = 8;
-  const HIDE_AFTER = 150;
-
   const hideOffset = useProgressiveHeader({
-    minY: HIDE_AFTER,
+    minY: 150,
     headerH,
-    peekPx: PEEK,
+    peekPx: 8,
     jitterPx: 2,
   });
 
-  // Hamburger glow (extra premium)
-  const hamburgerGlowOpen =
-    "ring-2 ring-yellow-300/70 shadow-[0_0_24px_#facc15,0_0_60px_rgba(250,204,21,0.55)]";
+  function openSearchFocus() {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setSearchFocus(true);
+  }
+  function closeSearchFocusSoon() {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    blurTimer.current = setTimeout(() => setSearchFocus(false), 140);
+  }
+  function cancelSearchFocus() {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    setSearchFocus(false);
+  }
 
   return (
     <>
-      {/* Spacer that shrinks/grows continuously so content never "jumps" */}
+      {/* Mobile Search Focus Mode backdrop */}
+      {searchFocus ? (
+        <div
+          className="fixed inset-0 z-[9998] bg-black/45 backdrop-blur-[2px] md:hidden"
+          onClick={cancelSearchFocus}
+          aria-hidden="true"
+        />
+      ) : null}
+
+      {/* Spacer */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
       <header
@@ -253,6 +276,21 @@ export function Header() {
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
         style={{ transform: `translateY(-${hideOffset}px)` }}
       >
+        {/* Global CSS targeting HeaderSearch internals for mobile readability */}
+        <style jsx global>{`
+          .leaflyx-mobile-search-shell input {
+            font-size: 16px !important; /* iOS: stops auto-zoom and improves readability */
+            line-height: 1.2 !important;
+          }
+          .leaflyx-mobile-search-shell.is-focus input {
+            font-size: 18px !important;
+          }
+          .leaflyx-mobile-search-shell a,
+          .leaflyx-mobile-search-shell button {
+            font-size: 14px;
+          }
+        `}</style>
+
         <div
           className="
             relative
@@ -264,21 +302,16 @@ export function Header() {
             transition-colors overflow-visible
           "
         >
-          {/* Golden hazes */}
+          {/* Hazes */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,230,180,0.15),transparent_75%)]" />
 
-          {/* Highlight line */}
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.4)] to-transparent z-20" />
 
-          {/* Content */}
           <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
-            {/* ✅ Amazon mobile order: ☰ (left) → Leaflyx → Search → Profile → Cart */}
-
-            {/* Left: hamburger + brand */}
-            <div className="flex items-center gap-2 min-w-0">
-              {/* Hamburger far-left */}
+            {/* Left: ☰ + brand */}
+            <div className={`flex items-center gap-2 min-w-0 ${searchFocus ? "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto" : ""}`}>
               <button
                 type="button"
                 onClick={() => setMobileOpen((v) => !v)}
@@ -300,7 +333,7 @@ export function Header() {
               <span className="hidden sm:inline text-xs opacity-80">Premium THCA goods</span>
             </div>
 
-            {/* Center: desktop nav + (mobile search in-row) */}
+            {/* Center */}
             <div className="flex-1 flex items-center justify-center min-w-0" style={{ gap: `${tuner.centerGap}px` }}>
               {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
@@ -315,13 +348,70 @@ export function Header() {
                 <NavLink href="/coa" label="COA" />
               </nav>
 
-              {/* ✅ Mobile search in header row */}
-              <div className="relative md:hidden flex-1 min-w-0" role="search" aria-label="Mobile site search">
-                <HeaderSearch
-                  placeholder="Search products…"
-                  searchRouteBase="/search"
-                  productRouteBase="/shop" // canonical /shop/[slug]
-                />
+              {/* ✅ Mobile Search (Amazon-style focus expansion) */}
+              <div
+                className={[
+                  "leaflyx-mobile-search-shell md:hidden",
+                  "relative flex-1 min-w-0",
+                  searchFocus ? "is-focus" : "",
+                  searchFocus
+                    ? "fixed left-3 right-3 top-[calc(env(safe-area-inset-top)+10px)] z-[9999]"
+                    : "",
+                ].join(" ")}
+                onFocusCapture={openSearchFocus}
+                onBlurCapture={closeSearchFocusSoon}
+                role="search"
+                aria-label="Mobile site search"
+              >
+                <div
+                  className={[
+                    "relative",
+                    searchFocus
+                      ? "rounded-3xl border border-[#d4af37]/75 bg-black/70 backdrop-blur-md shadow-[0_20px_100px_rgba(0,0,0,0.65)] p-2"
+                      : "",
+                  ].join(" ")}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <HeaderSearch
+                        placeholder="Search products…"
+                        searchRouteBase="/search"
+                        productRouteBase="/shop"
+                      />
+                    </div>
+
+                    {searchFocus ? (
+                      <button
+                        type="button"
+                        onClick={cancelSearchFocus}
+                        className="shrink-0 rounded-2xl px-3 py-2 text-sm font-semibold"
+                        style={{
+                          border: "1px solid rgba(212,175,55,0.7)",
+                          color: "#d4af37",
+                          background: "rgba(0,0,0,0.35)",
+                          boxShadow: "0 0 18px rgba(212,175,55,0.18)",
+                        }}
+                        aria-label="Cancel search"
+                      >
+                        Cancel
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* subtle glow divider under expanded search (premium) */}
+                  {searchFocus ? (
+                    <div
+                      aria-hidden
+                      className="mt-2 h-[2px] rounded-full"
+                      style={{
+                        background:
+                          "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                        boxShadow: "0 0 18px rgba(212,175,55,0.35)",
+                        opacity: 0.95,
+                      }}
+                    />
+                  ) : null}
+                </div>
               </div>
 
               {/* Desktop search (unchanged) */}
@@ -334,16 +424,12 @@ export function Header() {
                   transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
                 }}
               >
-                <HeaderSearch
-                  placeholder="Search products…"
-                  searchRouteBase="/search"
-                  productRouteBase="/shop"
-                />
+                <HeaderSearch placeholder="Search products…" searchRouteBase="/search" productRouteBase="/shop" />
               </div>
             </div>
 
-            {/* Right cluster: tuner (desktop), profile, cart */}
-            <div className="ml-auto flex items-center shrink-0" style={{ gap: `${tuner.rightGap}px` }}>
+            {/* Right */}
+            <div className={`ml-auto flex items-center shrink-0 ${searchFocus ? "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto" : ""}`} style={{ gap: `${tuner.rightGap}px` }}>
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -435,12 +521,7 @@ export function Header() {
                     ) : null}
                   </>
                 ) : (
-                  <Link
-                    href="/sign-in"
-                    aria-label="Sign in"
-                    title="Sign in"
-                    className={`${pill} relative shrink-0 !px-2`}
-                  >
+                  <Link href="/sign-in" aria-label="Sign in" title="Sign in" className={`${pill} relative shrink-0 !px-2`}>
                     <User className="h-5 w-5 text-white" aria-hidden="true" />
                   </Link>
                 )}
@@ -484,7 +565,7 @@ export function Header() {
             </div>
           </div>
 
-          {/* ✅ Mobile panel (links) + peek divider under it */}
+          {/* Mobile panel + peek divider */}
           <div className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}>
             <div
               ref={mobilePanelRef}
@@ -495,7 +576,6 @@ export function Header() {
                 overflow-hidden
               "
             >
-              {/* Links */}
               <div className="p-3 flex flex-wrap gap-2">
                 <NavLink href="/products" label="Shop" onClick={() => setMobileOpen(false)} className="!px-6" />
                 <NavLink href="/about" label="About" onClick={() => setMobileOpen(false)} />
@@ -524,7 +604,6 @@ export function Header() {
               </div>
             </div>
 
-            {/* ✅ Subtle “peek” gradient divider under panel */}
             <div
               aria-hidden
               className="mx-2 mt-2 h-[2px] rounded-full"
