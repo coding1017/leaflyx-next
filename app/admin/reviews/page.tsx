@@ -40,7 +40,7 @@ export default function AdminReviewsPage() {
 
   // load saved token from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("adminToken");
+    const saved = localStorage.getItem("leaflyx_admin_token");
     if (saved) setToken(saved);
   }, []);
 

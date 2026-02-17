@@ -152,7 +152,7 @@ export default function CheckoutClient() {
             className="
               h-fit rounded-3xl p-6
               border border-white/10
-              bg-black/25 backdrop-blur-md
+              bg-[#123426]
               shadow-[0_18px_60px_rgba(0,0,0,0.35),inset_0_1px_14px_rgba(255,255,255,0.04)]
             "
           >

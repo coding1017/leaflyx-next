@@ -97,7 +97,7 @@ export default async function SearchLandingPage({ params }: Props) {
           className="
             mt-4 rounded-3xl
             border border-white/10
-            bg-black/25 backdrop-blur-md
+           bg-[#123426]
             shadow-[0_18px_60px_rgba(0,0,0,0.35),inset_0_1px_14px_rgba(255,255,255,0.04)]
             p-5 md:p-6
           "

@@ -17,8 +17,8 @@ type Row = {
 function getAdminToken() {
   if (typeof window === "undefined") return "";
   return (
-    window.localStorage.getItem("adminToken") ||
-    window.localStorage.getItem("ADMIN_TOKEN") ||
+    window.localStorage.getItem("leaflyx_admin_token") ||
+    window.localStorage.getItem("LEAFLYX_ADMIN_TOKEN") ||
     ""
   );
 }

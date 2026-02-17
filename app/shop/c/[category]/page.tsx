@@ -5,7 +5,7 @@ export const revalidate = 0;
 import Container from "@/components/Container";
 import ProductGrid from "@/components/ProductGrid";
 import SectionH2 from "@/components/SectionH2";
-import { products } from "@/lib/products";
+import { getMergedCatalogProducts } from "@/lib/catalog-merged.server";
 import { getInventoryOverlayForCatalogProducts } from "@/lib/inventory.server";
 
 function normalizeTag(s: string) {
@@ -38,6 +38,8 @@ function prettyTitle(tag: string) {
 
 export default async function CategoryPage({ params }: { params: { category: string } }) {
   const tag = normalizeTag(params.category);
+
+  const products = await getMergedCatalogProducts();
   const filtered = (products as any[]).filter((p) => productHasTag(p, tag));
 
   const inventoryMap = await getInventoryOverlayForCatalogProducts(filtered);

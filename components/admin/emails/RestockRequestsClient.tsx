@@ -15,7 +15,7 @@ type ApiResp = { rows: Row[] } | { error: string; detail?: string };
 function getSavedToken() {
   if (typeof window === "undefined") return "";
   // ✅ match your Reviews page exactly
-  return window.localStorage.getItem("adminToken") || "";
+  return window.localStorage.getItem("leaflyx_admin_token") || "";
 }
 
 export default function RestockRequestsClient() {

@@ -130,7 +130,7 @@ export default function ProductDetailClient({
   initialSelectedVariantId,
   educationSlot,
 }: Props) {
-  const productInactive = product.active === false;
+  const productInactive = (product as any).active === false;
 
   const [selectedId, setSelectedId] = useState<string | undefined>(initialSelectedVariantId);
   const [reviewStats, setReviewStats] = useState<{ avgRating: number; reviewCount: number } | null>(null);
@@ -160,9 +160,9 @@ export default function ProductDetailClient({
   }, [hasVariants, variantsUI, selectedId]);
 
   const displayPrice = useMemo(() => {
-    if (hasVariants) return Number(selected?.price ?? product.price);
-    return Number(product.price);
-  }, [hasVariants, selected, product.price]);
+    if (hasVariants) return Number(selected?.price ?? (product as any).price);
+    return Number((product as any).price);
+  }, [hasVariants, selected, product]);
 
   const rawGallery: PI[] = useMemo(() => {
     const anyProduct = product as any;
@@ -182,8 +182,7 @@ export default function ProductDetailClient({
 
   const primaryImg: PI = galleryForRender[0];
 
-  const allVariantsSoldOut =
-    hasVariants && variantsUI.length > 0 && variantsUI.every((v) => v.soldOut);
+  const allVariantsSoldOut = hasVariants && variantsUI.length > 0 && variantsUI.every((v) => v.soldOut);
 
   const variantSoldOut = hasVariants ? (selected?.soldOut ?? true) : nonVariantQty <= 0;
   const canAddToCart = !productInactive && !variantSoldOut;
@@ -209,9 +208,14 @@ export default function ProductDetailClient({
     return enriched;
   }, [product, slug]);
 
+  // ✅ NEW: description rendering (premium + readable)
+  const description = useMemo(() => {
+    const d = String((product as any)?.description ?? "").trim();
+    return d.length ? d : "";
+  }, [product]);
+
   return (
     <>
-      {/* (your existing global styles block stays the same) */}
       {/* 2-col grid */}
       <div className="max-w-5xl mx-auto px-4 py-10 grid md:grid-cols-2 gap-8">
         {/* IMAGE */}
@@ -220,7 +224,7 @@ export default function ProductDetailClient({
             <div className="halo-window thin">
               <div className="halo-wrap halo-clip rounded-2xl" style={{ ["--halo-cut" as any]: "36px" }}>
                 <div className="img-card rounded-2xl">
-                  <ProductImageGallery images={galleryForRender} alt={product.name} />
+                  <ProductImageGallery images={galleryForRender} alt={(product as any).name} />
                 </div>
               </div>
             </div>
@@ -231,16 +235,20 @@ export default function ProductDetailClient({
         {/* INFO */}
         <div className="glow-card aura-strong rounded-3xl border border-white/10 bg-black/30 p-6">
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[var(--brand-gold)]">
-            {product.name}
+            {(product as any).name}
           </h1>
 
           {reviewStats && reviewStats.reviewCount > 0 ? (
-            <ReviewsSummaryStrip rating={reviewStats.avgRating} reviewCount={reviewStats.reviewCount} onClick={scrollToReviews} />
+            <ReviewsSummaryStrip
+              rating={reviewStats.avgRating}
+              reviewCount={reviewStats.reviewCount}
+              onClick={scrollToReviews}
+            />
           ) : null}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {product.badge ? <span className="badge">{product.badge}</span> : null}
-            {product.potency ? <span className="pill">{product.potency}</span> : null}
+            {(product as any).badge ? <span className="badge">{(product as any).badge}</span> : null}
+            {(product as any).potency ? <span className="pill">{(product as any).potency}</span> : null}
             {productInactive ? (
               <span className="pill border-red-500/30 text-red-200 bg-red-500/10">Inactive</span>
             ) : null}
@@ -252,6 +260,25 @@ export default function ProductDetailClient({
           {!productInactive && hasVariants && variantSoldOut && !allVariantsSoldOut ? (
             <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand-gold)]/10 px-3 py-1 text-sm text-[var(--brand-gold)] border border-[var(--brand-gold)]/30">
               Selected size is sold out
+            </div>
+          ) : null}
+
+          {/* ✅ NEW: Description appears exactly here:
+              below Small Batch / potency row, above Choose size */}
+          {description ? (
+            <div
+              className="
+                mt-4
+                rounded-2xl
+                border border-[rgba(245,215,122,0.25)]
+                bg-black/25
+                px-4 py-3
+                shadow-[0_0_0_1px_rgba(212,175,55,0.10)]
+              "
+            >
+              <div className="text-[13px] sm:text-[14px] leading-relaxed text-white/80">
+                {description}
+              </div>
             </div>
           ) : null}
 
@@ -328,7 +355,7 @@ export default function ProductDetailClient({
 
             {!canAddToCart ? (
               <BackInStockForm
-                productId={product.id}
+                productId={(product as any).id}
                 selectedLabel={hasVariants ? selectedVariantKeyForRequest : null}
                 variants={
                   hasVariants
@@ -342,8 +369,8 @@ export default function ProductDetailClient({
               />
             ) : (
               <AddToCartButton
-                id={product.id}
-                name={hasVariants && selected ? `${product.name} — ${selected.label}` : product.name}
+                id={(product as any).id}
+                name={hasVariants && selected ? `${(product as any).name} — ${selected.label}` : (product as any).name}
                 image={srcOf(primaryImg)}
                 price={displayPrice}
                 variant={selected?.label ?? undefined}
@@ -351,15 +378,15 @@ export default function ProductDetailClient({
               />
             )}
 
-            {product.coaUrl ? <CoaVerifiedPill href={product.coaUrl} className="ml-2" /> : null}
+            {(product as any).coaUrl ? <CoaVerifiedPill href={(product as any).coaUrl} className="ml-2" /> : null}
           </div>
 
           <CompareToggle
             item={{
-              id: product.id,
+              id: (product as any).id,
               slug,
-              name: product.name,
-              potency: product.potency ?? null,
+              name: (product as any).name,
+              potency: (product as any).potency ?? null,
               type: (product as any).type ?? null,
             }}
           />
@@ -408,7 +435,12 @@ export default function ProductDetailClient({
         </div>
       </div>
 
-      <ProductLDJson productSlug={slug} name={product.name} image={srcOf(primaryImg)} sku={(product as any).id ?? slug} />
+      <ProductLDJson
+        productSlug={slug}
+        name={(product as any).name}
+        image={srcOf(primaryImg)}
+        sku={(product as any).id ?? slug}
+      />
     </>
   );
 }

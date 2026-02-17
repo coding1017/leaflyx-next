@@ -2,6 +2,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type Row = {
@@ -9,11 +10,11 @@ type Row = {
   productName: string;
   slug: string | null;
 
-  variant: string | null; // "1g"
-  variantLabel: string | null; // "1 g"
+  variant: string | null;
+  variantLabel: string | null;
   qty: number;
 
-  updatedAt: string; // ISO
+  updatedAt: string;
   subscribers: number;
 
   category?: string | null;
@@ -41,41 +42,20 @@ function keyFor(pid: string, v: string | null) {
   return `${pid}__${v ?? "∅"}`;
 }
 
-/**
- * Numeric ordering for variants like:
- * 1g, 3.5g, 7g, 14g, 28g
- *
- * Handles messy strings too:
- * "1 g", "1 g (1g)", "28 g", etc.
- */
 function variantSortKey(row: Row) {
-  const raw = String(row.variant ?? row.variantLabel ?? "")
-    .trim()
-    .toLowerCase();
-
-  // Remove spaces and also strip parentheses content:
-  // "1 g (1g)" -> "1g"
-  const cleaned = raw
-    .replace(/\(.*?\)/g, "")
-    .replace(/\s+/g, "")
-    .trim();
-
-  // If nothing (non-variant), push last
+  const raw = String(row.variant ?? row.variantLabel ?? "").trim().toLowerCase();
+  const cleaned = raw.replace(/\(.*?\)/g, "").replace(/\s+/g, "").trim();
   if (!cleaned) return { unitRank: 9, value: Number.POSITIVE_INFINITY, tie: "" };
 
-  // grams: 3.5g
   const g = cleaned.match(/^(\d+(?:\.\d+)?)g$/);
   if (g) return { unitRank: 0, value: Number(g[1]), tie: cleaned };
 
-  // ounces: 1oz
   const oz = cleaned.match(/^(\d+(?:\.\d+)?)oz$/);
   if (oz) return { unitRank: 1, value: Number(oz[1]), tie: cleaned };
 
-  // mg: 500mg
   const mg = cleaned.match(/^(\d+(?:\.\d+)?)mg$/);
   if (mg) return { unitRank: 2, value: Number(mg[1]), tie: cleaned };
 
-  // fallback lexical
   return { unitRank: 5, value: Number.POSITIVE_INFINITY, tie: cleaned };
 }
 
@@ -126,19 +106,16 @@ function groupByProduct(rows: Row[]) {
     if (Number.isFinite(b) && b > a) g.updatedAtMax = r.updatedAt;
   }
 
-  // Sort variants numerically
   for (const pid of Object.keys(map)) {
     map[pid].variants.sort((a, b) => {
       const ak = variantSortKey(a);
       const bk = variantSortKey(b);
-
       if (ak.unitRank !== bk.unitRank) return ak.unitRank - bk.unitRank;
       if (ak.value !== bk.value) return ak.value - bk.value;
       return ak.tie.localeCompare(bk.tie);
     });
   }
 
-  // Sort products by name
   const sorted: typeof map = {};
   Object.values(map)
     .sort((a, b) => a.productName.toLowerCase().localeCompare(b.productName.toLowerCase()))
@@ -194,7 +171,6 @@ export default function AdminInventoryPage() {
       const nextRows = data.rows || [];
       setRows(nextRows);
 
-      // open first 5 by default (preserve existing toggles)
       const grouped = groupByProduct(nextRows);
       const nextOpen: Record<string, boolean> = { ...open };
       Object.keys(grouped)
@@ -225,10 +201,7 @@ export default function AdminInventoryPage() {
     try {
       const res = await fetch("/api/admin/inventory", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-token": token,
-        },
+        headers: { "Content-Type": "application/json", "x-admin-token": token },
         body: JSON.stringify({
           action: actionName,
           productId: row.productId,
@@ -239,7 +212,6 @@ export default function AdminInventoryPage() {
 
       const data = await res.json();
       setLastResult(data);
-
       if (!data.ok) throw new Error(data.error || "Action failed");
       await fetchList();
     } catch (e: any) {
@@ -249,33 +221,8 @@ export default function AdminInventoryPage() {
     }
   }
 
-  async function createMissingAll() {
-    if (!token) return;
-    setError(null);
-
-    try {
-      const res = await fetch("/api/admin/inventory", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-admin-token": token,
-        },
-        body: JSON.stringify({ action: "createMissing" }),
-      });
-
-      const data = await res.json();
-      setLastResult(data);
-
-      if (!data.ok) throw new Error(data.error || "Failed to create missing rows");
-      await fetchList();
-    } catch (e: any) {
-      setError(e?.message ?? "Failed");
-    }
-  }
-
   const filteredRows = useMemo(() => {
     const needle = canon(q);
-
     return rows
       .filter((r) => {
         if (!needle) return true;
@@ -294,130 +241,184 @@ export default function AdminInventoryPage() {
   const productCount = Object.keys(grouped).length;
   const variantCount = filteredRows.length;
 
+  // Leaflyx admin palette (solid-ish)
+  const EMERALD_900 = "bg-[#0B1A14]";
+  const EMERALD_800 = "bg-[#0E231B]";
+  const EMERALD_750 = "bg-[#123426]";
+  const GOLD_BORDER = "border-[rgba(245,215,122,0.55)]";
+  const GOLD_BORDER_STRONG = "border-[rgba(245,215,122,0.80)]";
+  const GOLD_TEXT = "text-[var(--brand-gold)]";
+  const MUTED = "text-white/70";
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-semibold">Admin Inventory</h1>
-      <p className="text-sm opacity-80 mt-1">
-        Grouped by product • thumbnails • numeric variant order • presets • create-missing rows
-      </p>
-
-      <div className="mt-6 rounded-2xl border border-white/10 bg-black/30 p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end">
-          <div className="flex-1">
-            <label className="text-xs opacity-70">Admin Token</label>
-            <input
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Paste ADMIN_TOKEN"
-              className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm"
-            />
+      <div className={`rounded-3xl border ${GOLD_BORDER} ${EMERALD_800} p-6`}>
+        {/* ✅ Title row with RIGHT-aligned buttons */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className={`text-2xl font-semibold ${GOLD_TEXT}`}>Admin Inventory</h1>
+            <p className={`text-sm ${MUTED} mt-1`}>
+              Grouped by product • thumbnails • numeric variant order
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={saveToken}
-              className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
+          <div className="flex flex-wrap gap-2 md:justify-end md:pt-1">
+            <Link
+              href="/admin/products/quick-create"
+              className={`
+                rounded-xl border ${GOLD_BORDER_STRONG}
+                ${EMERALD_750} px-4 py-2 text-sm text-white
+                hover:brightness-110 transition
+              `}
             >
-              Save token
-            </button>
+              Quick Create (legacy)
+            </Link>
 
-            <button
-              onClick={fetchList}
-              className="rounded-xl bg-yellow-500/20 px-4 py-2 text-sm hover:bg-yellow-500/30"
+            <Link
+              href="/admin/products/new"
+              className={`
+                rounded-xl bg-[var(--brand-gold)] px-4 py-2 text-sm font-semibold text-black
+                shadow-[0_0_28px_rgba(212,175,55,0.55)]
+                hover:brightness-110 hover:shadow-[0_0_36px_rgba(212,175,55,0.70)]
+                transition
+              `}
             >
-              Refresh
-            </button>
-
-            <button
-              onClick={createMissingAll}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
-              title="Creates Inventory rows for any products/variants that exist in lib/products.ts but not in Prisma Inventory"
-            >
-              Create missing rows
-            </button>
+              + New product
+            </Link>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap gap-3 items-center">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search product / id / slug / variant…"
-              className="w-full md:w-[420px] rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm"
-            />
+        <div className={`mt-5 rounded-2xl border ${GOLD_BORDER} ${EMERALD_900} p-4`}>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end">
+              <div className="flex-1">
+                <label className="text-xs text-white/70">Admin Token</label>
+                <input
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Paste ADMIN_TOKEN"
+                  className={`
+                    mt-1 w-full rounded-xl border ${GOLD_BORDER_STRONG}
+                    ${EMERALD_900} px-3 py-2 text-sm text-white outline-none
+                    placeholder:text-white/40
+                  `}
+                />
+              </div>
 
-            <label className="flex items-center gap-2 text-sm opacity-80">
-              <input
-                type="checkbox"
-                checked={showOnlySubscribed}
-                onChange={(e) => setShowOnlySubscribed(e.target.checked)}
-              />
-              Subscribers only
-            </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={saveToken}
+                  className={`
+                    rounded-xl border ${GOLD_BORDER_STRONG}
+                    ${EMERALD_750} px-4 py-2 text-sm text-white
+                    hover:brightness-110 transition
+                  `}
+                >
+                  Save token
+                </button>
 
-            <label className="flex items-center gap-2 text-sm opacity-80">
-              <input
-                type="checkbox"
-                checked={showOnlyOOS}
-                onChange={(e) => setShowOnlyOOS(e.target.checked)}
-              />
-              Out of stock only
-            </label>
-
-            <label className="flex items-center gap-2 text-sm opacity-80">
-              <input
-                type="checkbox"
-                checked={showOnlyMissing}
-                onChange={(e) => setShowOnlyMissing(e.target.checked)}
-              />
-              Missing rows only
-            </label>
-
-            <button
-              onClick={() => {
-                const next: Record<string, boolean> = {};
-                for (const pid of Object.keys(grouped)) next[pid] = true;
-                setOpen(next);
-              }}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
-            >
-              Expand all
-            </button>
-
-            <button
-              onClick={() => {
-                const next: Record<string, boolean> = {};
-                for (const pid of Object.keys(grouped)) next[pid] = false;
-                setOpen(next);
-              }}
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
-            >
-              Collapse all
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="text-sm opacity-70">Loading…</div>
-          ) : (
-            <div className="text-sm opacity-70">
-              {productCount} products • {variantCount} variants
+                <button
+                  onClick={fetchList}
+                  className={`
+                    rounded-xl bg-[var(--brand-gold)] px-4 py-2 text-sm text-black
+                    hover:brightness-110 transition
+                  `}
+                >
+                  Refresh
+                </button>
+              </div>
             </div>
-          )}
+
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap gap-3 items-center">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search product / id / slug / variant…"
+                  className={`
+                    w-full md:w-[420px] rounded-xl border ${GOLD_BORDER_STRONG}
+                    ${EMERALD_900} px-3 py-2 text-sm text-white outline-none
+                    placeholder:text-white/40
+                  `}
+                />
+
+                <label className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={showOnlySubscribed}
+                    onChange={(e) => setShowOnlySubscribed(e.target.checked)}
+                  />
+                  Subscribers only
+                </label>
+
+                <label className="flex items-center gap-2 text-sm text-white/80">
+                  <input type="checkbox" checked={showOnlyOOS} onChange={(e) => setShowOnlyOOS(e.target.checked)} />
+                  Out of stock only
+                </label>
+
+                <label className="flex items-center gap-2 text-sm text-white/80">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyMissing}
+                    onChange={(e) => setShowOnlyMissing(e.target.checked)}
+                  />
+                  Missing rows only
+                </label>
+
+                <button
+                  onClick={() => {
+                    const next: Record<string, boolean> = {};
+                    for (const pid of Object.keys(grouped)) next[pid] = true;
+                    setOpen(next);
+                  }}
+                  className={`
+                    rounded-xl border ${GOLD_BORDER_STRONG}
+                    ${EMERALD_750} px-3 py-2 text-xs text-white
+                    hover:brightness-110 transition
+                  `}
+                >
+                  Expand all
+                </button>
+
+                <button
+                  onClick={() => {
+                    const next: Record<string, boolean> = {};
+                    for (const pid of Object.keys(grouped)) next[pid] = false;
+                    setOpen(next);
+                  }}
+                  className={`
+                    rounded-xl border ${GOLD_BORDER_STRONG}
+                    ${EMERALD_750} px-3 py-2 text-xs text-white
+                    hover:brightness-110 transition
+                  `}
+                >
+                  Collapse all
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="text-sm text-white/70">Loading…</div>
+              ) : (
+                <div className="text-sm text-white/70">
+                  {productCount} products • {variantCount} variants
+                </div>
+              )}
+            </div>
+
+            {error ? (
+              <div className="mt-2 rounded-xl border border-red-600 bg-[#2A0F12] p-3 text-sm text-red-200">
+                {error}
+              </div>
+            ) : null}
+
+            {lastResult ? (
+              <div className={`mt-2 rounded-xl border ${GOLD_BORDER} ${EMERALD_900} p-3 text-xs text-white`}>
+                <div className="mb-1 font-semibold text-white/90">Last action result</div>
+                <pre className="whitespace-pre-wrap break-words text-white/80">{JSON.stringify(lastResult, null, 2)}</pre>
+              </div>
+            ) : null}
+          </div>
         </div>
-
-        {error ? (
-          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm">
-            {error}
-          </div>
-        ) : null}
-
-        {lastResult ? (
-          <div className="mt-3 rounded-xl border border-white/10 bg-black/40 p-3 text-xs">
-            <div className="opacity-70 mb-1">Last action result</div>
-            <pre className="whitespace-pre-wrap break-words">{JSON.stringify(lastResult, null, 2)}</pre>
-          </div>
-        ) : null}
       </div>
 
       <div className="mt-6 space-y-4">
@@ -434,7 +435,7 @@ export default function AdminInventoryPage() {
         ))}
 
         {!Object.keys(grouped).length && !loading ? (
-          <div className="rounded-2xl border border-white/10 bg-black/30 p-6 text-sm opacity-70">
+          <div className={`rounded-2xl border ${GOLD_BORDER} ${EMERALD_900} p-6 text-sm text-white/80`}>
             No matching products.
           </div>
         ) : null}
@@ -468,40 +469,39 @@ function ProductGroupCard({
   busyKey: string | null;
   onAction: (actionName: "setQty" | "resetQty" | "notify", row: Row, qty?: number) => Promise<void>;
 }) {
-  const href = group.slug ? `/shop/p/${group.slug}` : null;
+  const href = group.slug ? `/shop/${group.slug}` : null;
+
+  const EMERALD_850 = "bg-[#0E231B]";
+  const EMERALD_900 = "bg-[#0B1A14]";
+  const GOLD_BORDER = "border-[rgba(245,215,122,0.55)]";
+  const GOLD_BORDER_STRONG = "border-[rgba(245,215,122,0.80)]";
+  const GOLD_TEXT = "text-[var(--brand-gold)]";
 
   return (
-    <div
-      className={[
-        "rounded-2xl border border-white/10 bg-black/30 overflow-hidden",
-        "transition-shadow",
-        // subtle glow ring on hover
-        "hover:shadow-[0_0_0_1px_rgba(234,179,8,0.18),0_0_24px_rgba(16,185,129,0.10)]",
-      ].join(" ")}
-    >
+    <div className={`rounded-2xl overflow-hidden border ${GOLD_BORDER} ${EMERALD_850}`}>
       <button
         onClick={() => setOpen(!isOpen)}
-        className="w-full text-left px-4 py-4 hover:bg-white/5 flex items-center justify-between gap-4"
+        className={`w-full text-left px-4 py-4 hover:brightness-110 transition flex items-center justify-between gap-4`}
       >
         <div className="flex items-start gap-3">
-          <div className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+          <div className={`relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-xl border ${GOLD_BORDER_STRONG} ${EMERALD_900}`}>
             {group.image ? (
-              <Image
-                src={group.image}
-                alt={group.productName}
-                fill
-                sizes="48px"
-                className="object-cover"
-              />
+              <Image src={group.image} alt={group.productName} fill sizes="48px" className="object-cover" />
             ) : (
-              <div className="h-full w-full grid place-items-center text-[10px] opacity-60">No image</div>
+              <div className="h-full w-full grid place-items-center text-[10px] text-white/60">No image</div>
             )}
           </div>
 
-          <div>
-            <div className="text-lg font-semibold underline underline-offset-4">
+          <div className="min-w-0">
+            <div className="text-lg font-semibold text-white truncate">
               {href ? (
-                <a href={href} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:underline decoration-[var(--brand-gold)]"
+                >
                   {group.productName}
                 </a>
               ) : (
@@ -509,15 +509,21 @@ function ProductGroupCard({
               )}
             </div>
 
-            {group.category ? (
-              <div className="mt-1">
-                <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] opacity-85">
+            <div className="mt-1 flex flex-wrap gap-2 items-center">
+              {group.category ? (
+                <span className={`inline-flex items-center rounded-full border ${GOLD_BORDER_STRONG} bg-[#123426] px-2.5 py-1 text-[11px] text-white`}>
                   {group.category}
                 </span>
-              </div>
-            ) : null}
+              ) : null}
 
-            <div className="text-xs opacity-70 mt-1">
+              {group.anyMissing ? (
+                <span className="inline-flex items-center rounded-full border border-white/20 bg-[#1A1A1A] px-2.5 py-1 text-[11px] text-white/80">
+                  Missing row(s)
+                </span>
+              ) : null}
+            </div>
+
+            <div className="text-xs text-white/60 mt-1">
               {group.productId}
               {group.slug ? ` • ${group.slug}` : ""} • {group.variants.length} variant(s)
             </div>
@@ -525,24 +531,22 @@ function ProductGroupCard({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3">
-          {group.anyMissing ? (
-            <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70">
-              Missing row(s)
-            </span>
-          ) : null}
-
           {group.anyOOS ? (
-            <span className="rounded-full bg-red-500/15 px-3 py-1 text-xs text-red-200">Has OOS</span>
+            <span className="rounded-full bg-[#3A1012] px-3 py-1 text-xs text-red-100 border border-red-300/30">
+              Has OOS
+            </span>
           ) : (
-            <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
+            <span className="rounded-full bg-[#123426] px-3 py-1 text-xs text-emerald-100 border border-emerald-300/25">
               All in stock
             </span>
           )}
 
-          <span className="rounded-full bg-white/5 px-3 py-1 text-xs opacity-80">{group.totalSubscribers} subs</span>
-          <span className="text-xs opacity-70">Updated {fmtWhen(group.updatedAtMax)}</span>
+          <span className="rounded-full bg-[#0B1A14] px-3 py-1 text-xs text-white/80 border border-white/15">
+            {group.totalSubscribers} subs
+          </span>
+          <span className="text-xs text-white/60">Updated {fmtWhen(group.updatedAtMax)}</span>
 
-          <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs">
+          <span className={`rounded-xl border ${GOLD_BORDER_STRONG} bg-[#123426] px-3 py-2 text-xs text-white`}>
             {isOpen ? "Collapse" : "Expand"}
           </span>
         </div>
@@ -550,9 +554,9 @@ function ProductGroupCard({
 
       {isOpen ? (
         <div className="px-4 pb-4">
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+          <div className={`overflow-x-auto rounded-xl border ${GOLD_BORDER_STRONG} bg-[#0B1A14]`}>
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-white/10 text-xs uppercase tracking-wide opacity-70">
+              <thead className="border-b border-[rgba(245,215,122,0.35)] text-xs uppercase tracking-wide text-[var(--brand-gold)] bg-[#123426]">
                 <tr>
                   <th className="px-4 py-3">Variant</th>
                   <th className="px-4 py-3">Qty</th>
@@ -579,25 +583,25 @@ function ProductGroupCard({
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+              className="rounded-xl border border-white/15 bg-[#0B1A14] px-3 py-2 text-xs text-white hover:brightness-110 transition"
               onClick={() => group.variants.forEach((r) => onAction("setQty", r, 5))}
             >
               Set all 5
             </button>
             <button
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+              className="rounded-xl border border-white/15 bg-[#0B1A14] px-3 py-2 text-xs text-white hover:brightness-110 transition"
               onClick={() => group.variants.forEach((r) => onAction("setQty", r, 10))}
             >
               Set all 10
             </button>
             <button
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10"
+              className="rounded-xl border border-white/15 bg-[#0B1A14] px-3 py-2 text-xs text-white hover:brightness-110 transition"
               onClick={() => group.variants.forEach((r) => onAction("setQty", r, 20))}
             >
               Set all 20
             </button>
             <button
-              className="rounded-xl bg-red-500/15 px-3 py-2 text-xs text-red-200 hover:bg-red-500/25"
+              className="rounded-xl border border-red-300/25 bg-[#3A1012] px-3 py-2 text-xs text-red-100 hover:brightness-110 transition"
               onClick={() => group.variants.forEach((r) => onAction("resetQty", r))}
             >
               Reset all to 0
@@ -634,19 +638,17 @@ function VariantRow({
   const missing = !!row.missingInventory;
 
   return (
-    <tr className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
+    <tr className="border-b border-white/10 last:border-b-0 hover:brightness-110 transition">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="font-medium">{row.variantLabel ?? row.variant ?? "—"}</div>
-
-          {/* ghost badge when missing */}
+          <div className="font-medium text-white">{row.variantLabel ?? row.variant ?? "—"}</div>
           {missing ? (
-            <span className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
+            <span className="rounded-full border border-white/15 bg-[#1A1A1A] px-2 py-0.5 text-[11px] text-white/80">
               missing inventory row
             </span>
           ) : null}
         </div>
-        <div className="text-xs opacity-70">{row.variant ?? "null"}</div>
+        <div className="text-xs text-white/50">{row.variant ?? "null"}</div>
       </td>
 
       <td className="px-4 py-3">
@@ -654,7 +656,7 @@ function VariantRow({
           <button
             disabled={busy || row.qty <= 0}
             onClick={() => onSetQty(Math.max(0, row.qty - 1))}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs hover:bg-white/10 disabled:opacity-40"
+            className="rounded-lg border border-white/15 bg-[#0B1A14] px-2 py-1 text-xs text-white hover:brightness-110 disabled:opacity-50 transition"
             title="-1"
           >
             −
@@ -663,15 +665,17 @@ function VariantRow({
           <input
             value={val}
             onChange={(e) => setVal(e.target.value)}
-            className={`w-20 rounded-lg border px-2 py-1 text-sm ${
-              qtyValid ? "border-white/10 bg-black/40" : "border-red-500/40 bg-red-500/10"
+            className={`w-20 rounded-lg border px-2 py-1 text-sm outline-none ${
+              qtyValid
+                ? "border-[rgba(245,215,122,0.35)] bg-[#0B1A14] text-white"
+                : "border-red-400 bg-[#3A1012] text-red-100"
             }`}
           />
 
           <button
             disabled={busy}
             onClick={() => onSetQty(row.qty + 1)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs hover:bg-white/10 disabled:opacity-40"
+            className="rounded-lg border border-white/15 bg-[#0B1A14] px-2 py-1 text-xs text-white hover:brightness-110 disabled:opacity-50 transition"
             title="+1"
           >
             +
@@ -680,38 +684,15 @@ function VariantRow({
           <button
             disabled={busy || !qtyValid}
             onClick={() => onSetQty(Math.floor(Math.max(0, qtyNum)))}
-            className="rounded-lg bg-yellow-500/20 px-3 py-1 text-xs hover:bg-yellow-500/30 disabled:opacity-40"
+            className="rounded-lg bg-[var(--brand-gold)] px-3 py-1 text-xs text-black hover:brightness-110 disabled:opacity-50 transition"
           >
             Save
-          </button>
-
-          {/* presets */}
-          <button
-            disabled={busy}
-            onClick={() => onSetQty(5)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] hover:bg-white/10 disabled:opacity-40"
-          >
-            Set 5
-          </button>
-          <button
-            disabled={busy}
-            onClick={() => onSetQty(10)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] hover:bg-white/10 disabled:opacity-40"
-          >
-            Set 10
-          </button>
-          <button
-            disabled={busy}
-            onClick={() => onSetQty(20)}
-            className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[11px] hover:bg-white/10 disabled:opacity-40"
-          >
-            Set 20
           </button>
 
           <button
             disabled={busy}
             onClick={onReset}
-            className="rounded-lg bg-red-500/15 px-2 py-1 text-[11px] text-red-200 hover:bg-red-500/25 disabled:opacity-40"
+            className="rounded-lg border border-red-300/25 bg-[#3A1012] px-2 py-1 text-[11px] text-red-100 hover:brightness-110 disabled:opacity-50 transition"
           >
             Reset 0
           </button>
@@ -719,31 +700,35 @@ function VariantRow({
           <button
             disabled={busy || row.subscribers <= 0}
             onClick={onNotify}
-            className="rounded-lg bg-emerald-500/15 px-3 py-2 text-xs text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-40"
+            className="rounded-lg border border-emerald-300/25 bg-[#123426] px-3 py-2 text-xs text-emerald-100 hover:brightness-110 disabled:opacity-50 transition"
             title="Send restock email(s) to current subscribers without changing qty"
           >
             Force resend
           </button>
 
           {isOOS ? (
-            <span className="rounded-full bg-red-500/15 px-2 py-1 text-xs text-red-200">Out of stock</span>
+            <span className="rounded-full border border-red-300/25 bg-[#3A1012] px-2 py-1 text-xs text-red-100">
+              Out of stock
+            </span>
           ) : (
-            <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-xs text-emerald-200">In stock</span>
+            <span className="rounded-full border border-emerald-300/25 bg-[#123426] px-2 py-1 text-xs text-emerald-100">
+              In stock
+            </span>
           )}
         </div>
       </td>
 
       <td className="px-4 py-3">
-        <div className="font-medium">{row.subscribers}</div>
-        <div className="text-xs opacity-70">requests</div>
+        <div className="font-medium text-white">{row.subscribers}</div>
+        <div className="text-xs text-white/50">requests</div>
       </td>
 
       <td className="px-4 py-3">
-        <div className="text-sm">{fmtWhen(row.updatedAt)}</div>
+        <div className="text-sm text-white/80">{fmtWhen(row.updatedAt)}</div>
       </td>
 
       <td className="px-4 py-3">
-        <div className="text-xs opacity-70">{busy ? "Working…" : "—"}</div>
+        <div className="text-xs text-white/50">{busy ? "Working…" : "—"}</div>
       </td>
     </tr>
   );

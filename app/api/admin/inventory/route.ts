@@ -50,6 +50,7 @@ function pickImage(p: any): string | null {
 
 function pickCategory(p: any): string | null {
   if (p?.category) return String(p.category);
+
   const tags: string[] = Array.isArray(p?.tags) ? p.tags.map(String) : [];
   const known = [
     "flower",
@@ -93,8 +94,6 @@ function prettyVariant(variant: string | null, variantLabel: string | null) {
 }
 
 async function upsertInventoryQty(productId: string, variant: string | null, qty: number) {
-  // ✅ Prisma TS gets weird with compound unique + nullable field.
-  // So we do: findFirst → update by id OR create.
   const existing = await prisma.inventory.findFirst({
     where: { productId, variant },
     select: { id: true, qty: true },
@@ -193,6 +192,47 @@ async function sendRestockEmails(args: {
   return { matched: matched.length, emailed, sendErrors, deleted };
 }
 
+// --- Row creation helpers ---
+function desiredVariantsForProduct(p: any): Array<{ id: string | null; label: string | null }> {
+  return Array.isArray(p?.variants) && p.variants.length
+    ? p.variants.map((v: any) => ({
+        id: canon(v?.id),
+        label: v?.label ? String(v.label) : null,
+      }))
+    : [{ id: null, label: null }];
+}
+
+async function createMissingRowsForCatalog(catalog: any[], onlyProductId?: string) {
+  const list = onlyProductId
+    ? catalog.filter((pp) => String(pp?.id).toLowerCase() === String(onlyProductId).toLowerCase())
+    : catalog;
+
+  if (onlyProductId && !list.length) {
+    return { created: 0, scannedProducts: 0, reason: "Product not found in catalog" as const };
+  }
+
+  let created = 0;
+
+  for (const pp of list as any[]) {
+    const pid = String(pp.id);
+    const vars: Array<string | null> = desiredVariantsForProduct(pp).map((v) => v.id);
+
+    for (const v of vars) {
+      const exists = await prisma.inventory.findFirst({
+        where: { productId: pid, variant: v },
+        select: { id: true },
+      });
+
+      if (!exists) {
+        await prisma.inventory.create({ data: { productId: pid, variant: v, qty: 0 } });
+        created += 1;
+      }
+    }
+  }
+
+  return { created, scannedProducts: list.length, reason: null };
+}
+
 export async function GET(req: Request) {
   try {
     if (!requireAdmin(req)) {
@@ -232,13 +272,7 @@ export async function GET(req: Request) {
       const category = pickCategory(p);
       const image = pickImage(p);
 
-      const variants: Array<{ id: string | null; label: string | null }> =
-        Array.isArray(p.variants) && p.variants.length
-          ? p.variants.map((v: any) => ({
-              id: canon(v?.id),
-              label: v?.label ? String(v.label) : null,
-            }))
-          : [{ id: null, label: null }];
+      const variants = desiredVariantsForProduct(p);
 
       for (const v of variants) {
         const variant = v.id;
@@ -280,10 +314,42 @@ export async function POST(req: Request) {
     }
 
     const catalog = await getCatalogProducts();
+    const body = await req.json().catch(() => ({} as any));
 
-    const body = await req.json();
+    const actionRaw = String(body?.action ?? "");
+    const action = actionRaw.trim();
 
-    const action = String(body?.action ?? "");
+    // Backwards/forwards compatible aliases
+    const isEnsureAll =
+      action === "createMissing" || action === "ensureAllRows" || action === "ensureRowsAll";
+    const isEnsureOne =
+      action === "createOne" || action === "ensureProductRows" || action === "ensureRowsOne";
+
+    if (isEnsureAll) {
+      const res = await createMissingRowsForCatalog(catalog as any[]);
+      return NextResponse.json({ ok: true, created: res.created, scannedProducts: res.scannedProducts });
+    }
+
+    if (isEnsureOne) {
+      const productId = String(body?.productId ?? "").trim();
+      if (!productId) {
+        return NextResponse.json({ ok: false, error: "Missing productId" }, { status: 400 });
+      }
+
+      const res = await createMissingRowsForCatalog(catalog as any[], productId);
+      if (res.reason) {
+        return NextResponse.json({ ok: false, error: res.reason }, { status: 400 });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        productId,
+        created: res.created,
+        scannedProducts: res.scannedProducts,
+      });
+    }
+
+    // From here down, productId is required
     const productId = String(body?.productId ?? "").trim();
     const variant = canon(body?.variant);
 
@@ -298,33 +364,6 @@ export async function POST(req: Request) {
     const productName = p?.name ? String(p.name) : productId;
     const slug = p?.slug ? String(p.slug) : null;
     const variantLabel = variantLabelFromProduct(p, variant);
-
-    if (action === "createMissing") {
-      let created = 0;
-
-      for (const pp of catalog as any[]) {
-        const pid = String(pp.id);
-
-        const vars: Array<string | null> =
-          Array.isArray(pp.variants) && pp.variants.length
-            ? pp.variants.map((v: any) => canon(v?.id))
-            : [null];
-
-        for (const v of vars) {
-          const exists = await prisma.inventory.findFirst({
-            where: { productId: pid, variant: v },
-            select: { id: true },
-          });
-
-          if (!exists) {
-            await prisma.inventory.create({ data: { productId: pid, variant: v, qty: 0 } });
-            created += 1;
-          }
-        }
-      }
-
-      return NextResponse.json({ ok: true, created });
-    }
 
     if (action === "setQty") {
       const qty = Number(body?.qty);

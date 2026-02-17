@@ -215,7 +215,7 @@ export default function EditProfileForm() {
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+        <div className="rounded-2xl border border-[rgba(245,215,122,0.55)] bg-[#123426] p-4">
           <label className="text-xs uppercase tracking-wide text-white/60">
             Email
           </label>
@@ -225,7 +225,7 @@ export default function EditProfileForm() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+        <div className="rounded-2xl border border-[rgba(245,215,122,0.55)] bg-[#123426] p-4">
           <label className="text-xs uppercase tracking-wide text-white/60">
             Display name
           </label>
@@ -241,7 +241,7 @@ export default function EditProfileForm() {
         </div>
 
         {/* ✅ Birthday (Leaflyx styled picker on desktop) */}
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+        <div className="rounded-2xl border border-[rgba(245,215,122,0.55)] bg-[#123426] p-4">
           <div className="flex items-center justify-between gap-3">
             <label className="text-xs uppercase tracking-wide text-white/60">
               Birthday
@@ -272,7 +272,7 @@ export default function EditProfileForm() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+        <div className="rounded-2xl border border-[rgba(245,215,122,0.55)] bg-[#123426] p-4">
           <div className="flex items-center justify-between gap-3">
             <label className="text-xs uppercase tracking-wide text-white/60">
               Public handle

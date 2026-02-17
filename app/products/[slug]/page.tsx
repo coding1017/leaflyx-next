@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import type { StaticImageData } from "next/image";
 import { prisma } from "@/lib/prisma";
-import { getCatalogProducts } from "@/lib/catalog.server";
+import { getMergedCatalogProductBySlugOrId } from "@/lib/catalog-merged.server";
 import ProductDetailClient, { type VariantUI } from "@/components/ProductDetailClient";
 
 type PageParams = { params: { slug: string } };
@@ -30,24 +30,13 @@ function canonVariant(input: unknown): string | null {
   return s || null;
 }
 
-async function findProductBySlugOrId(slugOrId: string) {
-  const catalog = await getCatalogProducts();
-  const s = slugOrId.toLowerCase();
-
-  return (catalog as any[]).find((p) => {
-    const ps = p?.slug ? String(p.slug).toLowerCase() : "";
-    const pid = p?.id ? String(p.id).toLowerCase() : "";
-    return ps === s || pid === s;
-  });
-}
-
 /**
  * ✅ SEO: For /products/[slug], canonical to /shop/[slug]
  * and mark legacy route as noindex so Google doesn’t index duplicates.
  */
 export async function generateMetadata({ params }: PageParams): Promise<Metadata> {
   const slug = String(params.slug ?? "").toLowerCase();
-  const product = await findProductBySlugOrId(slug);
+  const product = await getMergedCatalogProductBySlugOrId(slug);
 
   if (!product) return { title: "Not found · Leaflyx" };
 
@@ -177,11 +166,11 @@ function WhatIsTHCADetails() {
 
 export default async function ProductDetailPage({ params, searchParams }: PageProps) {
   const slug = String(params.slug ?? "").toLowerCase();
-  const product = await findProductBySlugOrId(slug);
+  const product = await getMergedCatalogProductBySlugOrId(slug);
 
   if (!product) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-4 py-10 text-white">
         <p>Product not found.</p>
         <Link href="/products" className="underline">
           Back to shop
@@ -190,10 +179,10 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
     );
   }
 
-  const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+  const hasVariants = Array.isArray((product as any).variants) && (product as any).variants.length > 0;
 
   const invRows = await prisma.inventory.findMany({
-    where: { productId: product.id },
+    where: { productId: (product as any).id },
     select: { variant: true, qty: true },
   });
 
@@ -205,10 +194,10 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
     else qtyByVariant[String(r.variant).toLowerCase()] = r.qty;
   }
 
-  const subsByVariant = hasVariants ? await getSubscribersByVariant(product.id) : {};
+  const subsByVariant = hasVariants ? await getSubscribersByVariant((product as any).id) : {};
 
   const variantsUI: VariantUI[] = hasVariants
-    ? product.variants.map((v: any) => {
+    ? (product as any).variants.map((v: any) => {
         const vid = String(v.id).toLowerCase();
         const dbQty = qtyByVariant[vid];
         const qty = typeof dbQty === "number" ? dbQty : Number(v.stock ?? 0);
@@ -216,7 +205,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
         return {
           id: v.id,
           label: v.label,
-          price: Number(v.price ?? product.price ?? 0),
+          price: Number(v.price ?? (product as any).price ?? 0),
           isPopular: !!v.isPopular,
           qty,
           soldOut: qty <= 0,
@@ -225,7 +214,7 @@ export default async function ProductDetailPage({ params, searchParams }: PagePr
       })
     : [];
 
-  const nonVariantQty = productLevelQty != null ? productLevelQty : Number(product.stock ?? 0);
+  const nonVariantQty = productLevelQty != null ? productLevelQty : Number((product as any).stock ?? 0);
 
   const wanted = canonVariant(searchParams?.variant);
   const wantedExists =

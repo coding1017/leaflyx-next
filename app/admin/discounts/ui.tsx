@@ -267,7 +267,8 @@ export default function DiscountsAdminClient() {
             return (
               <div
                 key={c.id}
-                className="rounded-3xl border border-[var(--brand-gold)]/25 bg-black/30 p-5"
+                className="rounded-3xl border border-[rgba(245,215,122,0.55)] 
+                bg-[#123426]"
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div>

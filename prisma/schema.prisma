@@ -70,6 +70,8 @@ model Inventory {
   updatedAt DateTime @updatedAt
 
   @@unique([productId, variant], name: "productId_variant")
+  @@index([productId])
+  @@index([productId, variant])
 }
 
 enum UserRole {
@@ -82,10 +84,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  email String  @unique
-  name  String?
-  image String?
-  birthday  DateTime?
+  email    String  @unique
+  name     String?
+  image    String?
+  birthday DateTime?
 
   // Credentials auth (store hash only — NEVER plaintext)
   passwordHash String?
@@ -117,7 +119,7 @@ model User {
 }
 
 model Account {
-  id                String  @id @default(cuid())
+  id                String @id @default(cuid())
   userId            String
   type              String
   provider          String
@@ -167,7 +169,7 @@ model Order {
   status    OrderStatus @default(PAID)
 
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   totalCents Int    @default(0)
   currency   String @default("USD")
@@ -213,20 +215,20 @@ model DiscountCode {
   isActive        Boolean  @default(true)
 
   // discount definition
-  type            DiscountType
-  percentOff      Int?     // 1..50 (server clamps <= 50)
-  amountOffCents  Int?     // e.g. 500 = $5 off
+  type           DiscountType
+  percentOff     Int?      // 1..50 (server clamps <= 50)
+  amountOffCents Int?      // e.g. 500 = $5 off
 
   // optional constraints
-  minSubtotalCents Int?    // require cart subtotal >= this
-  maxUses          Int?    // total uses allowed (null = unlimited)
-  usesCount        Int     @default(0) // maintained server-side
+  minSubtotalCents Int?
+  maxUses          Int?
+  usesCount        Int      @default(0)
   expiresAt        DateTime?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  redemptions      DiscountRedemption[]
+  redemptions DiscountRedemption[]
 }
 
 enum DiscountType {
@@ -237,21 +239,19 @@ enum DiscountType {
 model DiscountRedemption {
   id             String   @id @default(cuid())
   discountCodeId String
-  codeSnapshot   String   // store code as used (in case code changes later)
+  codeSnapshot   String
 
-  // who used it (optional, but helpful)
-  userId         String?
-  userEmail      String?
+  userId    String?
+  userEmail String?
 
-  // purchase snapshot
-  subtotalCents  Int
-  discountCents  Int
-  totalCents     Int
-  itemsJson      Json      // cart items snapshot
+  subtotalCents Int
+  discountCents Int
+  totalCents    Int
+  itemsJson     Json
 
-  createdAt      DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id])
+  discountCode DiscountCode @relation(fields: [discountCodeId], references: [id])
 
   @@index([discountCodeId, createdAt])
 }
@@ -259,9 +259,9 @@ model DiscountRedemption {
 model Subscriber {
   id             String   @id @default(cuid())
   email          String   @unique
-  status         String   @default("ACTIVE") // ACTIVE | UNSUBSCRIBED
-  source         String?  // e.g. "cart_notice_modal"
-  tags           String?  // comma-separated tags if you want
+  status         String   @default("ACTIVE")
+  source         String?
+  tags           String?
   token          String   @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -272,7 +272,7 @@ model Subscriber {
  * ✅ DB-backed catalog products (Admin can add products without touching lib/products.ts)
  */
 model CatalogProduct {
-  id            String   @id
+  id            String   @id @default(cuid())
   slug          String   @unique
   name          String
 
@@ -286,6 +286,9 @@ model CatalogProduct {
   coaUrl        String?
   active        Boolean  @default(true)
 
+  // ✅ NEW: optional product description (admin-managed)
+  description   String?
+
   imageUrl      String?
   imageUrls     Json?
 
@@ -293,6 +296,9 @@ model CatalogProduct {
   updatedAt     DateTime @updatedAt
 
   variants      CatalogVariant[]
+
+  @@index([category])
+  @@index([active])
 }
 
 model CatalogVariant {

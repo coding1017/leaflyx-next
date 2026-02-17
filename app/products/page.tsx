@@ -9,7 +9,7 @@ import SectionH2 from "@/components/SectionH2";
 import ProductGrid from "@/components/ProductGrid";
 import ResubscribedToast from "@/components/ResubscribedToast";
 
-import { getCatalogProducts } from "@/lib/catalog.server";
+import { getMergedCatalogProducts } from "@/lib/catalog-merged.server";
 import { getInventoryOverlayForCatalogProducts } from "@/lib/inventory.server";
 
 function hasAnyTag(p: any, tags: string[]) {
@@ -26,9 +26,7 @@ function hasAnyTag(p: any, tags: string[]) {
 }
 
 export default async function ProductsPage() {
-  // ✅ THIS is the key line you were asking about:
-  // It replaces `import { products } from "@/lib/products"`
-  const products = await getCatalogProducts();
+  const products = await getMergedCatalogProducts();
 
   const flower = (products as any[]).filter((p) => hasAnyTag(p, ["flower"]));
   const edibles = (products as any[]).filter((p) =>
@@ -38,7 +36,6 @@ export default async function ProductsPage() {
     hasAnyTag(p, ["concentrates", "live-resin", "hash-rosin", "bubble-hash"])
   );
 
-  // one overlay per section (keeps it simple + fast enough)
   const [invFlower, invEdibles, invConcentrates] = await Promise.all([
     getInventoryOverlayForCatalogProducts(flower),
     getInventoryOverlayForCatalogProducts(edibles),
@@ -47,7 +44,6 @@ export default async function ProductsPage() {
 
   return (
     <Container>
-      {/* 🔔 Shows only when /products?resubscribed=1 (client-side) */}
       <ResubscribedToast />
 
       <div className="pt-6">

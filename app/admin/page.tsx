@@ -14,10 +14,10 @@ function Card({
     <Link
       href={href}
       className="
-        rounded-3xl border border-[var(--brand-gold)]/25
-        bg-black/25 backdrop-blur-md
+        rounded-3xl border border-[rgba(245,215,122,0.55)]
+        bg-[#123426]
         p-6 block
-        hover:border-[var(--brand-gold)]/50 hover:bg-black/35
+       hover:border-[rgba(245,215,122,0.85)] hover:bg-[#163a2a]
         transition
       "
     >

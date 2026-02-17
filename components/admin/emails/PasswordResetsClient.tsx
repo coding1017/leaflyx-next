@@ -16,7 +16,7 @@ type StatusFilter = "ALL" | "PENDING" | "USED" | "EXPIRED";
 
 function getSavedToken() {
   if (typeof window === "undefined") return "";
-  return window.localStorage.getItem("adminToken") || "";
+  return window.localStorage.getItem("leaflyx_admin_token") || "";
 }
 
 function statusOf(r: Row): "PENDING" | "USED" | "EXPIRED" {
