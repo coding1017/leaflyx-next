@@ -56,7 +56,6 @@ function useProgressiveHeader(opts: {
 
     const onScroll = () => {
       const y = window.scrollY || 0;
-
       if (tickingRef.current) return;
       tickingRef.current = true;
 
@@ -104,7 +103,6 @@ export function Header() {
   const count = typeof ctxCount === "number" ? ctxCount : computedCount;
 
   const pathname = usePathname();
-
   const { data: session, status } = useSession();
   const authed = status === "authenticated";
   const init = useMemo(
@@ -118,14 +116,14 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
 
-  // ✅ Search Focus Mode (mobile)
-  const [searchFocus, setSearchFocus] = useState(false);
-  const blurTimer = useRef<any>(null);
+  // ✅ Mobile Search expands into “second row” (no blur/overlay)
+  const [searchRowOpen, setSearchRowOpen] = useState(false);
+  const searchRowRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMenuOpen(false);
     setMobileOpen(false);
-    setSearchFocus(false);
+    setSearchRowOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -133,25 +131,41 @@ export function Header() {
       if (e.key === "Escape") {
         setMenuOpen(false);
         setMobileOpen(false);
-        setSearchFocus(false);
+        setSearchRowOpen(false);
       }
     }
+
     function onClickOutside(e: MouseEvent) {
       const t = e.target as Node;
 
       if (menuOpen && menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
       if (mobileOpen && mobilePanelRef.current && !mobilePanelRef.current.contains(t)) setMobileOpen(false);
+
+      // close search row when tapping outside it
+      if (searchRowOpen && searchRowRef.current && !searchRowRef.current.contains(t)) {
+        setSearchRowOpen(false);
+      }
     }
 
-    if (menuOpen || mobileOpen) {
-      window.addEventListener("keydown", onKey);
-      window.addEventListener("mousedown", onClickOutside);
-    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onClickOutside);
+
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onClickOutside);
     };
-  }, [menuOpen, mobileOpen]);
+  }, [menuOpen, mobileOpen, searchRowOpen]);
+
+  // Auto-focus the input inside the expanded row
+  useEffect(() => {
+    if (!searchRowOpen) return;
+    const id = requestAnimationFrame(() => {
+      const el = searchRowRef.current;
+      const input = el?.querySelector("input") as HTMLInputElement | null;
+      input?.focus?.();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [searchRowOpen]);
 
   const pill =
     "group inline-flex items-center justify-center rounded-2xl px-3 py-1.5 " +
@@ -207,7 +221,7 @@ export function Header() {
   async function doSignOut() {
     setMenuOpen(false);
     setMobileOpen(false);
-    setSearchFocus(false);
+    setSearchRowOpen(false);
     await signOut({ callbackUrl: "/" });
   }
 
@@ -244,31 +258,8 @@ export function Header() {
     jitterPx: 2,
   });
 
-  function openSearchFocus() {
-    if (blurTimer.current) clearTimeout(blurTimer.current);
-    setSearchFocus(true);
-  }
-  function closeSearchFocusSoon() {
-    if (blurTimer.current) clearTimeout(blurTimer.current);
-    blurTimer.current = setTimeout(() => setSearchFocus(false), 140);
-  }
-  function cancelSearchFocus() {
-    if (blurTimer.current) clearTimeout(blurTimer.current);
-    setSearchFocus(false);
-  }
-
   return (
     <>
-      {/* Mobile Search Focus Mode backdrop */}
-      {searchFocus ? (
-        <div
-          className="fixed inset-0 z-[9998] bg-black/45 backdrop-blur-[2px] md:hidden"
-          onClick={cancelSearchFocus}
-          aria-hidden="true"
-        />
-      ) : null}
-
-      {/* Spacer */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
       <header
@@ -276,18 +267,11 @@ export function Header() {
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
         style={{ transform: `translateY(-${hideOffset}px)` }}
       >
-        {/* Global CSS targeting HeaderSearch internals for mobile readability */}
+        {/* Make iOS inputs readable + prevent weird zoom */}
         <style jsx global>{`
-          .leaflyx-mobile-search-shell input {
-            font-size: 16px !important; /* iOS: stops auto-zoom and improves readability */
+          .leaflyx-mobile-search-row input {
+            font-size: 16px !important;
             line-height: 1.2 !important;
-          }
-          .leaflyx-mobile-search-shell.is-focus input {
-            font-size: 18px !important;
-          }
-          .leaflyx-mobile-search-shell a,
-          .leaflyx-mobile-search-shell button {
-            font-size: 14px;
           }
         `}</style>
 
@@ -302,16 +286,15 @@ export function Header() {
             transition-colors overflow-visible
           "
         >
-          {/* Hazes */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,230,180,0.15),transparent_75%)]" />
-
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.4)] to-transparent z-20" />
 
+          {/* Row 1 */}
           <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
-            {/* Left: ☰ + brand */}
-            <div className={`flex items-center gap-2 min-w-0 ${searchFocus ? "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto" : ""}`}>
+            {/* Left: ☰ + Leaflyx */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setMobileOpen((v) => !v)}
@@ -329,13 +312,32 @@ export function Header() {
               >
                 <span className={`font-semibold tracking-tight ${gradientText}`}>Leaflyx</span>
               </Link>
-
-              <span className="hidden sm:inline text-xs opacity-80">Premium THCA goods</span>
             </div>
 
-            {/* Center */}
-            <div className="flex-1 flex items-center justify-center min-w-0" style={{ gap: `${tuner.centerGap}px` }}>
-              {/* Desktop nav */}
+            {/* Middle: compact search trigger (tap opens row 2) */}
+            <div className="flex-1 min-w-0 md:hidden">
+              {!searchRowOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchRowOpen(true)}
+                  className="
+                    w-full rounded-2xl px-3 py-2
+                    bg-black/25 hover:bg-black/35
+                    border border-white/10
+                    text-left
+                    flex items-center gap-2
+                  "
+                  aria-label="Open search"
+                >
+                  <span className="text-white/60">Search products…</span>
+                </button>
+              ) : (
+                <div className="h-[40px]" aria-hidden="true" />
+              )}
+            </div>
+
+            {/* Desktop center: nav + search (unchanged) */}
+            <div className="hidden md:flex flex-1 items-center justify-center" style={{ gap: `${tuner.centerGap}px` }}>
               <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
                 <ShopMenu
                   active={isActive("/shop")}
@@ -348,73 +350,6 @@ export function Header() {
                 <NavLink href="/coa" label="COA" />
               </nav>
 
-              {/* ✅ Mobile Search (Amazon-style focus expansion) */}
-              <div
-                className={[
-                  "leaflyx-mobile-search-shell md:hidden",
-                  "relative flex-1 min-w-0",
-                  searchFocus ? "is-focus" : "",
-                  searchFocus
-                    ? "fixed left-3 right-3 top-[calc(env(safe-area-inset-top)+10px)] z-[9999]"
-                    : "",
-                ].join(" ")}
-                onFocusCapture={openSearchFocus}
-                onBlurCapture={closeSearchFocusSoon}
-                role="search"
-                aria-label="Mobile site search"
-              >
-                <div
-                  className={[
-                    "relative",
-                    searchFocus
-                      ? "rounded-3xl border border-[#d4af37]/75 bg-black/70 backdrop-blur-md shadow-[0_20px_100px_rgba(0,0,0,0.65)] p-2"
-                      : "",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <HeaderSearch
-                        placeholder="Search products…"
-                        searchRouteBase="/search"
-                        productRouteBase="/shop"
-                      />
-                    </div>
-
-                    {searchFocus ? (
-                      <button
-                        type="button"
-                        onClick={cancelSearchFocus}
-                        className="shrink-0 rounded-2xl px-3 py-2 text-sm font-semibold"
-                        style={{
-                          border: "1px solid rgba(212,175,55,0.7)",
-                          color: "#d4af37",
-                          background: "rgba(0,0,0,0.35)",
-                          boxShadow: "0 0 18px rgba(212,175,55,0.18)",
-                        }}
-                        aria-label="Cancel search"
-                      >
-                        Cancel
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {/* subtle glow divider under expanded search (premium) */}
-                  {searchFocus ? (
-                    <div
-                      aria-hidden
-                      className="mt-2 h-[2px] rounded-full"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                        boxShadow: "0 0 18px rgba(212,175,55,0.35)",
-                        opacity: 0.95,
-                      }}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Desktop search (unchanged) */}
               <div
                 className="relative hidden sm:block"
                 role="search"
@@ -428,8 +363,8 @@ export function Header() {
               </div>
             </div>
 
-            {/* Right */}
-            <div className={`ml-auto flex items-center shrink-0 ${searchFocus ? "opacity-0 pointer-events-none md:opacity-100 md:pointer-events-auto" : ""}`} style={{ gap: `${tuner.rightGap}px` }}>
+            {/* Right cluster */}
+            <div className="ml-auto flex items-center shrink-0" style={{ gap: `${tuner.rightGap}px` }}>
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -452,11 +387,7 @@ export function Header() {
               ) : null}
 
               {/* Profile dropdown */}
-              <div
-                ref={menuRef}
-                className="relative"
-                style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}
-              >
+              <div ref={menuRef} className="relative" style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}>
                 {authed ? (
                   <>
                     <button
@@ -565,7 +496,56 @@ export function Header() {
             </div>
           </div>
 
-          {/* Mobile panel + peek divider */}
+          {/* ✅ Row 2: expanded search drawer (no blur overlay) */}
+          {searchRowOpen ? (
+            <div className="relative z-10 md:hidden px-3 pb-3">
+              <div
+                ref={searchRowRef}
+                className="
+                  leaflyx-mobile-search-row
+                  rounded-3xl border border-[#d4af37]/65
+                  bg-black/55 backdrop-blur-md
+                  shadow-[0_18px_80px_rgba(0,0,0,0.55)]
+                  overflow-hidden
+                  p-2
+                "
+              >
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <HeaderSearch placeholder="Search products…" searchRouteBase="/search" productRouteBase="/shop" />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSearchRowOpen(false)}
+                    className="shrink-0 rounded-2xl px-3 py-2 text-sm font-semibold"
+                    style={{
+                      border: "1px solid rgba(212,175,55,0.7)",
+                      color: "#d4af37",
+                      background: "rgba(0,0,0,0.35)",
+                      boxShadow: "0 0 18px rgba(212,175,55,0.18)",
+                    }}
+                    aria-label="Close search"
+                  >
+                    Done
+                  </button>
+                </div>
+
+                <div
+                  aria-hidden
+                  className="mt-2 h-[2px] rounded-full"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                    boxShadow: "0 0 18px rgba(212,175,55,0.35)",
+                    opacity: 0.95,
+                  }}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {/* Mobile menu panel + divider */}
           <div className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}>
             <div
               ref={mobilePanelRef}

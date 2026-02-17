@@ -190,7 +190,10 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   />
                 </div>
 
-                <div className="px-4 pb-4 overflow-y-auto flex-1 overscroll-contain" style={{ WebkitOverflowScrolling: "touch" as any }}>
+                <div
+                  className="px-4 pb-4 overflow-y-auto flex-1 overscroll-contain"
+                  style={{ WebkitOverflowScrolling: "touch" as any }}
+                >
                   {!pairsWell.length ? (
                     <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
                       Add an item to your cart to see suggestions.
@@ -275,7 +278,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                 }}
               />
 
-              {/* ✅ Cart panel: width is min(420px, 100vw) so nothing gets cut off */}
+              {/* Cart panel */}
               <div
                 className="h-[100dvh] bg-black/85 text-white shadow-xl flex flex-col"
                 style={{
@@ -303,9 +306,9 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   }}
                 />
 
-                {/* Scroll area */}
+                {/* ✅ Scroll area: NO giant bottom padding (prevents “dead black scroll”) */}
                 <div
-                  className="px-4 overflow-y-auto flex-1 overscroll-contain pt-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))]"
+                  className="px-4 overflow-y-auto flex-1 overscroll-contain pt-3 pb-4"
                   style={{ WebkitOverflowScrolling: "touch" as any }}
                 >
                   {!items.length ? (
