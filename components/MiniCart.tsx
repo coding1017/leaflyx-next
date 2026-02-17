@@ -40,6 +40,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
   useEffect(() => {
     if (!open) return;
+
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
 
@@ -158,14 +159,14 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
             <div
               className={`
-                absolute right-0 top-0 h-full
+                absolute right-0 top-0 h-[100dvh]
                 flex
                 transform transition-transform duration-300 will-change-transform
                 ${animateIn ? "translate-x-0" : "translate-x-full"}
               `}
               style={{ gap: 0 }}
             >
-              {/* LEFT: Pairs well */}
+              {/* LEFT: Pairs well (desktop only, unchanged) */}
               <aside
                 className={`
                   hidden lg:flex h-full
@@ -205,7 +206,10 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   </div>
                 </div>
 
-                <div className="px-4 pb-4 overflow-y-auto flex-1">
+                <div
+                  className="px-4 pb-4 overflow-y-auto flex-1 overscroll-contain"
+                  style={{ WebkitOverflowScrolling: "touch" as any }}
+                >
                   {!pairsWell.length ? (
                     <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
                       Add an item to your cart to see suggestions.
@@ -234,13 +238,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                                   backgroundColor: "#000",
                                 }}
                               >
-                                <Image
-                                  src={srcOf(p.image)}
-                                  alt={p.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="76px"
-                                />
+                                <Image src={srcOf(p.image)} alt={p.name} fill className="object-cover" sizes="76px" />
                               </div>
 
                               <div className="min-w-0 flex-1">
@@ -272,7 +270,7 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
                                   <div className="flex items-center gap-2">
                                     <Link
-                                      href={`/shop/${p.slug}`}   // ✅ canonical
+                                      href={`/shop/${p.slug}`}
                                       className="text-xs text-white/70 hover:text-white underline underline-offset-4"
                                     >
                                       View
@@ -333,8 +331,8 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
 
               {/* RIGHT: Cart */}
               <div
-                className="h-full w-[380px] sm:w-[420px] bg-black/85 text-white shadow-xl flex flex-col"
-                style={{ width: CART_W, borderLeft: "none" }}
+                className="h-[100dvh] w-[92vw] sm:w-[420px] bg-black/85 text-white shadow-xl flex flex-col"
+                style={{ width: CART_W, borderLeft: "none", paddingBottom: "env(safe-area-inset-bottom)" as any }}
               >
                 <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                   <h2 className="text-xl font-semibold leading-none">
@@ -359,11 +357,15 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                   }}
                 />
 
-                <div className="px-4 pb-4 overflow-y-auto flex-1">
+                {/* ✅ Scroll area (fix iPhone cutoff) */}
+                <div
+                  className="px-4 overflow-y-auto flex-1 overscroll-contain pt-3 pb-[calc(7.5rem+env(safe-area-inset-bottom))]"
+                  style={{ WebkitOverflowScrolling: "touch" as any }}
+                >
                   {!items.length ? (
                     <div className="mt-8 text-center text-gray-300">Your cart is empty.</div>
                   ) : (
-                    <div className="mt-3 space-y-4">
+                    <>
                       <ul className="space-y-3">
                         {items.map((it: any) => (
                           <li key={`${it.id}__${it.variant ?? "base"}`} className="flex items-center gap-3">
@@ -424,16 +426,124 @@ export default function MiniCart({ children }: { children?: React.ReactNode | Mi
                         ))}
                       </ul>
 
-                      <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                      <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between">
                         <div className="text-gray-300">Subtotal</div>
                         <div className="text-lg font-semibold">{usd(subtotalCents)}</div>
                       </div>
-                    </div>
+
+                      {/* ✅ Mobile Pairs Well With (so you can see it on phone) */}
+                      <div className="lg:hidden mt-5">
+                        <div className="flex items-end justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="text-lg font-semibold leading-none">
+                              <span className="bg-gradient-to-r from-emerald-200 to-yellow-200 bg-clip-text text-transparent">
+                                Pairs Well With
+                              </span>
+                            </h3>
+                            <div
+                              className="mt-2 h-[2px] w-28 rounded-full"
+                              style={{
+                                background:
+                                  "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                                opacity: 0.9,
+                              }}
+                            />
+                          </div>
+
+                          {lastCartItem?.name ? (
+                            <div className="text-[11px] text-white/55 truncate max-w-[140px]">
+                              Based on: <span className="text-white/75">{lastCartItem.name}</span>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {!pairsWell.length ? (
+                          <div className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-4 text-sm text-white/70">
+                            Add an item to your cart to see suggestions.
+                          </div>
+                        ) : (
+                          <div className="mt-3 flex gap-3 overflow-x-auto pb-2 pr-2 overscroll-contain">
+                            {pairsWell.map((p: any) => {
+                              const chosenVariant = pickDefaultVariant(p);
+                              const priceDollars = chosenVariant?.price ?? p?.price ?? 0;
+
+                              return (
+                                <div
+                                  key={`mrec_${String(p.id)}`}
+                                  className="shrink-0 w-[220px] rounded-2xl overflow-hidden"
+                                  style={{
+                                    border: `2px solid ${GOLD}`,
+                                    background: "rgba(0,0,0,0.55)",
+                                    boxShadow: "0 0 22px rgba(212,175,55,0.10)",
+                                  }}
+                                >
+                                  <div className="flex gap-3 p-3">
+                                    <div
+                                      className="relative w-[64px] h-[64px] rounded-xl overflow-hidden shrink-0"
+                                      style={{ border: `2px solid ${GOLD}`, backgroundColor: "#000" }}
+                                    >
+                                      <Image src={srcOf(p.image)} alt={p.name} fill className="object-cover" sizes="64px" />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-semibold leading-snug line-clamp-2">
+                                        <span className="bg-gradient-to-r from-emerald-200 to-yellow-200 bg-clip-text text-transparent">
+                                          {p.name}
+                                        </span>
+                                      </div>
+
+                                      <div className="mt-1 text-xs text-white/70">
+                                        ${Number(priceDollars).toFixed(2)}
+                                        {chosenVariant?.label ? <span className="text-white/55"> • {chosenVariant.label}</span> : null}
+                                      </div>
+
+                                      <div className="mt-2 flex items-center justify-between gap-2">
+                                        <Link
+                                          href={`/shop/${p.slug}`}
+                                          className="text-xs text-white/70 hover:text-white underline underline-offset-4"
+                                        >
+                                          View
+                                        </Link>
+                                        <button
+                                          type="button"
+                                          onClick={() => addRecommendedToCart(p)}
+                                          disabled={!canAddFromRec}
+                                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                                            canAddFromRec ? "" : "opacity-60 cursor-not-allowed"
+                                          }`}
+                                          style={{
+                                            background: GOLD,
+                                            color: "#000",
+                                            border: `1px solid rgba(0,0,0,0.65)`,
+                                            boxShadow: "0 10px 26px rgba(212,175,55,0.22)",
+                                          }}
+                                          aria-label={`Add ${p.name} to cart`}
+                                        >
+                                          <Plus className="w-4 h-4" />
+                                          Add
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div
+                                    className="h-[2px] w-full"
+                                    style={{
+                                      background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.55), transparent)",
+                                    }}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
 
-                {/* footer */}
-                <div className="px-4 py-6 relative">
+                {/* Footer (safe-area friendly) */}
+                <div className="px-4 py-6 relative pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
                   <div
                     aria-hidden
                     className="absolute inset-x-4 bottom-6 h-14 rounded-full"

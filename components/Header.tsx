@@ -4,15 +4,7 @@
 import AnnouncementBar from "./AnnouncementBar";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import {
-  ShoppingCart,
-  User,
-  LogOut,
-  Package,
-  SlidersHorizontal,
-  Menu,
-  X,
-} from "lucide-react";
+import { ShoppingCart, User, LogOut, Package, SlidersHorizontal, Menu, X } from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
@@ -53,7 +45,6 @@ function useProgressiveHeader(opts: {
   const lastYRef = useRef(0);
   const tickingRef = useRef(false);
 
-  // Clamp offset if header height changes
   useEffect(() => {
     setOffset((v) => Math.min(Math.max(v, 0), maxHide));
   }, [maxHide]);
@@ -71,14 +62,12 @@ function useProgressiveHeader(opts: {
         const lastY = lastYRef.current;
         const diff = y - lastY; // + down, - up
 
-        // Ignore tiny jitter to keep trackpads silky
         if (Math.abs(diff) < jitterPx) {
           lastYRef.current = y;
           tickingRef.current = false;
           return;
         }
 
-        // Before threshold: fully shown
         if (y < minY || maxHide === 0) {
           setOffset(0);
           lastYRef.current = y;
@@ -86,7 +75,6 @@ function useProgressiveHeader(opts: {
           return;
         }
 
-        // After threshold: move by exact delta, clamp to [0..maxHide]
         setOffset((prev) => {
           const next = prev + diff;
           return Math.min(Math.max(next, 0), maxHide);
@@ -115,7 +103,6 @@ export function Header() {
 
   const pathname = usePathname();
 
-  // ✅ NextAuth session for profile dropdown
   const { data: session, status } = useSession();
   const authed = status === "authenticated";
   const init = useMemo(
@@ -123,15 +110,14 @@ export function Header() {
     [session?.user]
   );
 
-  // Dropdown state (desktop avatar menu)
+  // Desktop avatar dropdown
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // ✅ Mobile panel state
+  // Mobile hamburger panel
   const [mobileOpen, setMobileOpen] = useState(false);
   const mobilePanelRef = useRef<HTMLDivElement | null>(null);
 
-  // Close menus on route change
   useEffect(() => {
     setMenuOpen(false);
     setMobileOpen(false);
@@ -147,14 +133,8 @@ export function Header() {
     function onClickOutside(e: MouseEvent) {
       const t = e.target as Node;
 
-      if (menuOpen && menuRef.current && !menuRef.current.contains(t)) {
-        setMenuOpen(false);
-      }
-      if (mobileOpen && mobilePanelRef.current && !mobilePanelRef.current.contains(t)) {
-        // only close if clicking outside the panel area (not the header buttons)
-        // This keeps taps feeling normal.
-        setMobileOpen(false);
-      }
+      if (menuOpen && menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
+      if (mobileOpen && mobilePanelRef.current && !mobilePanelRef.current.contains(t)) setMobileOpen(false);
     }
 
     if (menuOpen || mobileOpen) {
@@ -167,19 +147,16 @@ export function Header() {
     };
   }, [menuOpen, mobileOpen]);
 
-  // Shared styles
   const pill =
     "group inline-flex items-center justify-center rounded-2xl px-3 py-1.5 " +
     "bg-black/40 hover:bg-black/60 transition text-sm " +
     "hover:shadow-[0_0_14px_#facc15,0_0_28px_#facc15]";
 
-  // Double-length Shop pill
   const shopPill = pill.replace("px-3", "px-6");
 
   const gradientText =
     "bg-gradient-to-r from-lime-400 to-yellow-300 bg-clip-text text-transparent";
 
-  // Glow styles
   const activeGlow =
     "ring-2 ring-yellow-300/60 shadow-[0_0_24px_#facc15,0_0_48px_#facc15,0_0_72px_rgba(250,204,21,0.6)]";
   const subtleGlow =
@@ -189,11 +166,7 @@ export function Header() {
     if (!pathname) return false;
     if (href === "/") return pathname === "/";
     if (href === "/shop") {
-      return (
-        pathname.startsWith("/products") ||
-        pathname.startsWith("/category") ||
-        pathname.startsWith("/shop")
-      );
+      return pathname.startsWith("/products") || pathname.startsWith("/category") || pathname.startsWith("/shop");
     }
     return pathname.startsWith(href);
   };
@@ -232,7 +205,7 @@ export function Header() {
   const { tuner, clampPatch, reset } = useHeaderLayoutTuner();
   const [tuneOpen, setTuneOpen] = useState(false);
 
-  // Measure header height so spacer matches exactly (AnnouncementBar included)
+  // Measure header height for spacer (AnnouncementBar included)
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
 
@@ -246,7 +219,6 @@ export function Header() {
     };
 
     measure();
-
     const ro = new ResizeObserver(() => measure());
     ro.observe(el);
 
@@ -257,7 +229,6 @@ export function Header() {
     };
   }, []);
 
-  // ✅ Progressive Amazon-style hide after 150px, keep 8px peek
   const PEEK = 8;
   const HIDE_AFTER = 150;
 
@@ -268,18 +239,19 @@ export function Header() {
     jitterPx: 2,
   });
 
+  // Hamburger glow (extra premium)
+  const hamburgerGlowOpen =
+    "ring-2 ring-yellow-300/70 shadow-[0_0_24px_#facc15,0_0_60px_rgba(250,204,21,0.55)]";
+
   return (
     <>
       {/* Spacer that shrinks/grows continuously so content never "jumps" */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
-      {/* Fixed header that moves by the exact scroll delta */}
       <header
         ref={headerRef as any}
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
-        style={{
-          transform: `translateY(-${hideOffset}px)`,
-        }}
+        style={{ transform: `translateY(-${hideOffset}px)` }}
       >
         <div
           className="
@@ -302,8 +274,21 @@ export function Header() {
 
           {/* Content */}
           <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
-            {/* Brand */}
+            {/* ✅ Amazon mobile order: ☰ (left) → Leaflyx → Search → Profile → Cart */}
+
+            {/* Left: hamburger + brand */}
             <div className="flex items-center gap-2 min-w-0">
+              {/* Hamburger far-left */}
+              <button
+                type="button"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileOpen}
+                className={`${pill} md:hidden relative shrink-0 !px-2 ${mobileOpen ? `${activeGlow} ${hamburgerGlowOpen}` : ""}`}
+              >
+                {mobileOpen ? <X className="h-5 w-5 text-white/90" /> : <Menu className="h-5 w-5 text-white/90" />}
+              </button>
+
               <Link
                 href="/"
                 aria-current={isActive("/") ? "page" : undefined}
@@ -311,14 +296,13 @@ export function Header() {
               >
                 <span className={`font-semibold tracking-tight ${gradientText}`}>Leaflyx</span>
               </Link>
+
               <span className="hidden sm:inline text-xs opacity-80">Premium THCA goods</span>
             </div>
 
-            {/* Center: Nav + Search */}
-            <div
-              className="flex-1 flex items-center justify-center"
-              style={{ gap: `${tuner.centerGap}px` }}
-            >
+            {/* Center: desktop nav + (mobile search in-row) */}
+            <div className="flex-1 flex items-center justify-center min-w-0" style={{ gap: `${tuner.centerGap}px` }}>
+              {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
                 <ShopMenu
                   active={isActive("/shop")}
@@ -331,7 +315,16 @@ export function Header() {
                 <NavLink href="/coa" label="COA" />
               </nav>
 
-              {/* ✅ Search (desktop+) — Amazon-style dropdown */}
+              {/* ✅ Mobile search in header row */}
+              <div className="relative md:hidden flex-1 min-w-0" role="search" aria-label="Mobile site search">
+                <HeaderSearch
+                  placeholder="Search products…"
+                  searchRouteBase="/search"
+                  productRouteBase="/shop" // canonical /shop/[slug]
+                />
+              </div>
+
+              {/* Desktop search (unchanged) */}
               <div
                 className="relative hidden sm:block"
                 role="search"
@@ -344,28 +337,13 @@ export function Header() {
                 <HeaderSearch
                   placeholder="Search products…"
                   searchRouteBase="/search"
-                  productRouteBase="/shop" // ✅ canonical /shop/[slug]
+                  productRouteBase="/shop"
                 />
               </div>
             </div>
 
-            {/* Right cluster */}
-            <div className="ml-auto flex items-center" style={{ gap: `${tuner.rightGap}px` }}>
-              {/* ✅ Mobile hamburger (only on mobile) */}
-              <button
-                type="button"
-                onClick={() => setMobileOpen((v) => !v)}
-                aria-label={mobileOpen ? "Close menu" : "Open menu"}
-                aria-expanded={mobileOpen}
-                className={`${pill} md:hidden relative shrink-0 !px-2 ${mobileOpen ? activeGlow : ""}`}
-              >
-                {mobileOpen ? (
-                  <X className="h-5 w-5 text-white/90" />
-                ) : (
-                  <Menu className="h-5 w-5 text-white/90" />
-                )}
-              </button>
-
+            {/* Right cluster: tuner (desktop), profile, cart */}
+            <div className="ml-auto flex items-center shrink-0" style={{ gap: `${tuner.rightGap}px` }}>
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -387,13 +365,11 @@ export function Header() {
                 </div>
               ) : null}
 
-              {/* ✅ Profile Dropdown (desktop + mobile icon stays) */}
+              {/* Profile dropdown */}
               <div
                 ref={menuRef}
                 className="relative"
-                style={{
-                  transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)`,
-                }}
+                style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}
               >
                 {authed ? (
                   <>
@@ -406,9 +382,7 @@ export function Header() {
                       className={`${pill} ${menuOpen || isActive("/account") ? activeGlow : ""} relative shrink-0 !px-2`}
                     >
                       <span className="grid h-7 w-7 place-items-center rounded-full bg-black/35 ring-1 ring-[var(--brand-gold)] shadow-[0_0_12px_rgba(212,175,55,.35)]">
-                        <span className="text-[11px] font-semibold text-[var(--brand-gold)]">
-                          {init}
-                        </span>
+                        <span className="text-[11px] font-semibold text-[var(--brand-gold)]">{init}</span>
                       </span>
                     </button>
 
@@ -425,19 +399,14 @@ export function Header() {
                       >
                         <div className="px-3 py-2 border-b border-white/10">
                           <div className="text-xs text-white/55">Signed in as</div>
-                          <div className="text-sm text-white/85 truncate">
-                            {session?.user?.email ?? "—"}
-                          </div>
+                          <div className="text-sm text-white/85 truncate">{session?.user?.email ?? "—"}</div>
                         </div>
 
                         <Link
                           role="menuitem"
                           href="/account"
                           onClick={() => setMenuOpen(false)}
-                          className="
-                            flex items-center gap-2 px-3 py-2
-                            text-sm text-white/85 hover:bg-white/10
-                          "
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
                         >
                           <User className="h-4 w-4 text-[var(--brand-gold)]" />
                           Account
@@ -447,10 +416,7 @@ export function Header() {
                           role="menuitem"
                           href="/account/orders"
                           onClick={() => setMenuOpen(false)}
-                          className="
-                            flex items-center gap-2 px-3 py-2
-                            text-sm text-white/85 hover:bg-white/10
-                          "
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
                         >
                           <Package className="h-4 w-4 text-[var(--brand-gold)]" />
                           Orders
@@ -460,11 +426,7 @@ export function Header() {
                           type="button"
                           role="menuitem"
                           onClick={doSignOut}
-                          className="
-                            w-full flex items-center gap-2 px-3 py-2
-                            text-sm text-white/85 hover:bg-white/10
-                            border-t border-white/10
-                          "
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10 border-t border-white/10"
                         >
                           <LogOut className="h-4 w-4 text-[var(--brand-gold)]" />
                           Sign out
@@ -522,36 +484,19 @@ export function Header() {
             </div>
           </div>
 
-          {/* ✅ Mobile panel (nav + search) */}
-          <div
-            className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}
-          >
+          {/* ✅ Mobile panel (links) + peek divider under it */}
+          <div className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}>
             <div
               ref={mobilePanelRef}
               className="
-                mt-2 rounded-3xl border border-[#d4af37]/50
+                mt-2 rounded-3xl border border-[#d4af37]/55
                 bg-black/55 backdrop-blur-md
                 shadow-[0_18px_80px_rgba(0,0,0,0.55)]
                 overflow-hidden
               "
             >
-              {/* Mobile Search */}
-              <div className="p-3 border-b border-white/10">
-                <div className="relative" role="search" aria-label="Mobile site search">
-                  <HeaderSearch
-                    placeholder="Search products…"
-                    searchRouteBase="/search"
-                    productRouteBase="/shop"
-                  />
-                </div>
-                <div className="mt-2 text-[11px] text-white/55">
-                  Tip: search works great on mobile — products open in the same premium /shop view.
-                </div>
-              </div>
-
-              {/* Mobile Links */}
+              {/* Links */}
               <div className="p-3 flex flex-wrap gap-2">
-                {/* Use same active logic as desktop */}
                 <NavLink href="/products" label="Shop" onClick={() => setMobileOpen(false)} className="!px-6" />
                 <NavLink href="/about" label="About" onClick={() => setMobileOpen(false)} />
                 <NavLink href="/faq" label="FAQ" onClick={() => setMobileOpen(false)} />
@@ -567,25 +512,29 @@ export function Header() {
                       <span className={gradientText}>Account</span>
                     </Link>
 
-                    <button
-                      type="button"
-                      onClick={doSignOut}
-                      className={`${pill} border border-white/10`}
-                    >
+                    <button type="button" onClick={doSignOut} className={`${pill} border border-white/10`}>
                       <span className={gradientText}>Sign out</span>
                     </button>
                   </>
                 ) : (
-                  <Link
-                    href="/sign-in"
-                    onClick={() => setMobileOpen(false)}
-                    className={`${pill} border border-white/10`}
-                  >
+                  <Link href="/sign-in" onClick={() => setMobileOpen(false)} className={`${pill} border border-white/10`}>
                     <span className={gradientText}>Sign in</span>
                   </Link>
                 )}
               </div>
             </div>
+
+            {/* ✅ Subtle “peek” gradient divider under panel */}
+            <div
+              aria-hidden
+              className="mx-2 mt-2 h-[2px] rounded-full"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                boxShadow: "0 0 18px rgba(212,175,55,0.35)",
+                opacity: 0.95,
+              }}
+            />
           </div>
         </div>
 
