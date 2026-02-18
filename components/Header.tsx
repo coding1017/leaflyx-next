@@ -4,7 +4,15 @@
 import AnnouncementBar from "./AnnouncementBar";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import { ShoppingCart, User, LogOut, Package, SlidersHorizontal, Menu, X } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  LogOut,
+  Package,
+  SlidersHorizontal,
+  Menu,
+  X,
+} from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
@@ -14,7 +22,7 @@ import { useSession, signOut } from "next-auth/react";
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
 import { useHeaderLayoutTuner } from "./header/useHeaderLayoutTuner";
 
-// Amazon-style search dropdown component
+// ✅ Amazon-style search dropdown component
 import HeaderSearch from "@/components/HeaderSearch";
 
 function initialsFrom(name?: string | null, email?: string | null) {
@@ -28,23 +36,24 @@ function initialsFrom(name?: string | null, email?: string | null) {
 
 /**
  * Amazon-style progressive header:
- * - after `minY`, the header translates by the exact scroll delta
- * - clamps so `peekPx` remains visible when fully hidden
+ * - after `minY`, the header translates by the *exact scroll delta* (pixel-perfect)
+ * - clamps so `peekPx` remains visible when fully "hidden"
  */
 function useProgressiveHeader(opts: {
   minY: number;
-  headerH: number;
-  peekPx: number;
-  jitterPx?: number;
+  headerH: number; // measured header height
+  peekPx: number; // pixels that remain visible when fully hidden
+  jitterPx?: number; // ignore tiny scroll jitter (trackpads)
 }) {
   const { minY, headerH, peekPx, jitterPx = 2 } = opts;
 
-  const maxHide = Math.max(0, headerH - peekPx);
-  const [offset, setOffset] = useState(0);
+  const maxHide = Math.max(0, headerH - peekPx); // px the header can slide up
+  const [offset, setOffset] = useState(0); // 0..maxHide
 
   const lastYRef = useRef(0);
   const tickingRef = useRef(false);
 
+  // Clamp offset if header height changes
   useEffect(() => {
     setOffset((v) => Math.min(Math.max(v, 0), maxHide));
   }, [maxHide]);
@@ -54,19 +63,22 @@ function useProgressiveHeader(opts: {
 
     const onScroll = () => {
       const y = window.scrollY || 0;
+
       if (tickingRef.current) return;
       tickingRef.current = true;
 
       requestAnimationFrame(() => {
         const lastY = lastYRef.current;
-        const diff = y - lastY;
+        const diff = y - lastY; // + down, - up
 
+        // Ignore tiny jitter to keep trackpads silky
         if (Math.abs(diff) < jitterPx) {
           lastYRef.current = y;
           tickingRef.current = false;
           return;
         }
 
+        // Before threshold: fully shown
         if (y < minY || maxHide === 0) {
           setOffset(0);
           lastYRef.current = y;
@@ -74,6 +86,7 @@ function useProgressiveHeader(opts: {
           return;
         }
 
+        // After threshold: move by exact delta, clamp to [0..maxHide]
         setOffset((prev) => {
           const next = prev + diff;
           return Math.min(Math.max(next, 0), maxHide);
@@ -102,7 +115,7 @@ export function Header() {
 
   const pathname = usePathname();
 
-  // NextAuth session
+  // ✅ NextAuth session for profile dropdown
   const { data: session, status } = useSession();
   const authed = status === "authenticated";
   const init = useMemo(
@@ -110,45 +123,27 @@ export function Header() {
     [session?.user]
   );
 
-  // Profile dropdown
+  // Desktop profile dropdown state
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Mobile nav panel + mobile search panel
-  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
-  const [mobileSearchActive, setMobileSearchActive] = useState(false);
-  const mobileSearchPanelRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setMenuOpen(false);
-        setMobilePanelOpen(false);
-        setMobileSearchActive(false);
-      }
+      if (e.key === "Escape") setMenuOpen(false);
     }
     function onClickOutside(e: MouseEvent) {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("mousedown", onClickOutside);
+    if (menuOpen) {
+      window.addEventListener("keydown", onKey);
+      window.addEventListener("mousedown", onClickOutside);
+    }
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onClickOutside);
     };
-  }, []);
-
-  // When mobile search activates, focus the input inside the panel (HeaderSearch renders an input)
-  useEffect(() => {
-    if (!mobileSearchActive) return;
-    const id = requestAnimationFrame(() => {
-      const el = mobileSearchPanelRef.current;
-      const input = el?.querySelector("input") as HTMLInputElement | null;
-      input?.focus();
-    });
-    return () => cancelAnimationFrame(id);
-  }, [mobileSearchActive]);
+  }, [menuOpen]);
 
   // Shared styles
   const pill =
@@ -156,11 +151,13 @@ export function Header() {
     "bg-black/40 hover:bg-black/60 transition text-sm " +
     "hover:shadow-[0_0_14px_#facc15,0_0_28px_#facc15]";
 
+  // Double-length Shop pill
   const shopPill = pill.replace("px-3", "px-6");
 
   const gradientText =
     "bg-gradient-to-r from-lime-400 to-yellow-300 bg-clip-text text-transparent";
 
+  // Glow styles
   const activeGlow =
     "ring-2 ring-yellow-300/60 shadow-[0_0_24px_#facc15,0_0_48px_#facc15,0_0_72px_rgba(250,204,21,0.6)]";
   const subtleGlow =
@@ -197,11 +194,58 @@ export function Header() {
     await signOut({ callbackUrl: "/" });
   }
 
-  // Header tuner (dev only)
+  // ✅ Header tuner (only meaningful desktop)
   const { tuner, clampPatch, reset } = useHeaderLayoutTuner();
   const [tuneOpen, setTuneOpen] = useState(false);
 
-  // Measure header height
+  // Track desktop breakpoint so we don't apply tuner transforms on mobile (fixes cut-off)
+  const [mdUp, setMdUp] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 768px)");
+    const apply = () => setMdUp(!!m.matches);
+    apply();
+    m.addEventListener?.("change", apply);
+    return () => m.removeEventListener?.("change", apply);
+  }, []);
+
+  // ---- Mobile: hamburger menu + expanded search row ----
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const expandedSearchWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close mobile drawers on route change
+  useEffect(() => {
+    setMobileOpen(false);
+    setMobileSearchOpen(false);
+  }, [pathname]);
+
+  // ESC closes mobile drawers (desktop keyboards)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        setMobileSearchOpen(false);
+      }
+    }
+    if (mobileOpen || mobileSearchOpen) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, mobileSearchOpen]);
+
+  // When expanded search opens, focus the input inside so iOS pops the keyboard
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    const t = window.setTimeout(() => {
+      const root = expandedSearchWrapRef.current;
+      const input = root?.querySelector("input") as HTMLInputElement | null;
+      input?.focus?.();
+      try {
+        input?.setSelectionRange?.(input.value.length, input.value.length);
+      } catch {}
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [mobileSearchOpen]);
+
+  // Measure header height so spacer matches exactly (AnnouncementBar included)
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
 
@@ -226,7 +270,7 @@ export function Header() {
     };
   }, []);
 
-  // Progressive hide
+  // ✅ Progressive Amazon-style hide after 150px, keep 8px peek
   const PEEK = 8;
   const HIDE_AFTER = 150;
 
@@ -237,23 +281,27 @@ export function Header() {
     jitterPx: 2,
   });
 
-  // Close mobile overlays when route changes
-  useEffect(() => {
-    setMobilePanelOpen(false);
-    setMobileSearchActive(false);
-  }, [pathname]);
-
-  const hamburgerOpen = mobilePanelOpen;
+  // Close mobile menu if you open search (and vice-versa)
+  function openMobileSearch() {
+    setMobileOpen(false);
+    setMobileSearchOpen(true);
+  }
+  function closeMobileSearch() {
+    setMobileSearchOpen(false);
+  }
 
   return (
     <>
-      {/* Spacer so content never jumps */}
+      {/* Spacer that shrinks/grows continuously so content never "jumps" */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
+      {/* Fixed header that moves by the exact scroll delta */}
       <header
         ref={headerRef as any}
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
-        style={{ transform: `translateY(-${hideOffset}px)` }}
+        style={{
+          transform: `translateY(-${hideOffset}px)`,
+        }}
       >
         <div
           className="
@@ -263,13 +311,8 @@ export function Header() {
             hover:from-[rgba(212,175,55,0.45)] hover:via-[rgba(180,140,40,0.45)] hover:to-[rgba(212,175,55,0.45)]
             border-b-2 border-[#d4af37]
             shadow-[inset_0_1px_8px_rgba(255,255,255,0.1),0_2px_12px_rgba(0,0,0,0.35)]
-            transition-colors
-            overflow-visible
+            transition-colors overflow-visible
           "
-          style={{
-            paddingLeft: "env(safe-area-inset-left)",
-            paddingRight: "env(safe-area-inset-right)",
-          }}
         >
           {/* Golden hazes */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,220,150,0.25),transparent_70%)]" />
@@ -279,21 +322,32 @@ export function Header() {
           {/* Highlight line */}
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.4)] to-transparent z-20" />
 
-          {/* Content row */}
-          <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
-            {/* Mobile: Hamburger (far left) */}
+          {/* Content */}
+          <div
+            className="
+              relative z-10 max-w-6xl mx-auto
+              py-2 flex items-center gap-2
+              overflow-visible
+              pl-[max(0.75rem,env(safe-area-inset-left))]
+              pr-[max(0.75rem,env(safe-area-inset-right))]
+            "
+          >
+            {/* MOBILE: Hamburger (far left) */}
             <button
               type="button"
+              onClick={() => {
+                // toggle menu; if search is open, close it first
+                setMobileSearchOpen(false);
+                setMobileOpen((v) => !v);
+              }}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
               className={`
-                md:hidden
-                ${pill} !px-2 shrink-0
-                ${hamburgerOpen ? activeGlow : ""}
+                ${pill} !px-2 shrink-0 md:hidden
+                ${mobileOpen ? activeGlow : ""}
               `}
-              aria-label={hamburgerOpen ? "Close menu" : "Open menu"}
-              aria-expanded={hamburgerOpen}
-              onClick={() => setMobilePanelOpen((v) => !v)}
             >
-              {hamburgerOpen ? (
+              {mobileOpen ? (
                 <X className="h-5 w-5 text-white/90" />
               ) : (
                 <Menu className="h-5 w-5 text-white/90" />
@@ -301,7 +355,7 @@ export function Header() {
             </button>
 
             {/* Brand */}
-            <div className="flex items-center gap-2 min-w-0 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
               <Link
                 href="/"
                 aria-current={isActive("/") ? "page" : undefined}
@@ -313,7 +367,10 @@ export function Header() {
             </div>
 
             {/* Center: Desktop nav + search */}
-            <div className="flex-1 flex items-center justify-center" style={{ gap: `${tuner.centerGap}px` }}>
+            <div
+              className="flex-1 flex items-center justify-center min-w-0"
+              style={mdUp ? { gap: `${tuner.centerGap}px` } : { gap: 10 }}
+            >
               <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
                 <ShopMenu
                   active={isActive("/shop")}
@@ -326,49 +383,59 @@ export function Header() {
                 <NavLink href="/coa" label="COA" />
               </nav>
 
-              {/* Desktop search */}
+              {/* ✅ Search (desktop+) — Amazon-style dropdown */}
               <div
-                className="relative hidden sm:block"
+                className="relative hidden sm:block min-w-0"
                 role="search"
                 aria-label="Site search"
-                style={{
-                  width: `${tuner.searchWidth}px`,
-                  transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
-                }}
+                style={
+                  mdUp
+                    ? {
+                        width: `${tuner.searchWidth}px`,
+                        transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
+                      }
+                    : {
+                        width: "100%",
+                        maxWidth: 420,
+                      }
+                }
               >
                 <HeaderSearch
                   placeholder="Search products…"
                   searchRouteBase="/search"
-                  productRouteBase="/shop"
+                  productRouteBase="/shop" // ✅ canonical /shop/[slug]
                 />
               </div>
 
-              {/* Mobile resting search (looks like before) */}
-              <div className="sm:hidden flex-1 min-w-0">
-                <div
-                  className={`
-                    relative
+              {/* ✅ MOBILE: resting search (old compact look) */}
+              {!mobileSearchOpen ? (
+                <button
+                  type="button"
+                  onClick={openMobileSearch}
+                  aria-label="Search"
+                  className="
+                    sm:hidden
+                    flex-1 min-w-0
                     rounded-2xl
-                    bg-white/85
-                    border border-black/30
-                    shadow-[0_10px_24px_rgba(0,0,0,0.18)]
-                    ring-1 ring-[rgba(212,175,55,0.55)]
+                    bg-black/25 hover:bg-black/35
+                    border border-white/10
                     px-3 py-2
-                    flex items-center gap-2
-                    cursor-text
-                  `}
-                  onClick={() => setMobileSearchActive(true)}
-                  role="button"
-                  aria-label="Search products"
+                    text-left
+                  "
                 >
-                  <span className="text-black/70">🔎</span>
-                  <span className="text-black/60 text-sm truncate">Search products…</span>
-                </div>
-              </div>
+                  <span className="text-white/60">Search</span>
+                </button>
+              ) : (
+                // keep spacing when expanded (so right icons don’t jump)
+                <div className="sm:hidden flex-1 min-w-0" />
+              )}
             </div>
 
             {/* Right cluster */}
-            <div className="ml-auto flex items-center" style={{ gap: `${tuner.rightGap}px` }}>
+            <div
+              className="ml-auto flex items-center shrink-0"
+              style={mdUp ? { gap: `${tuner.rightGap}px` } : { gap: 8 }}
+            >
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -390,11 +457,15 @@ export function Header() {
                 </div>
               ) : null}
 
-              {/* Profile Dropdown */}
+              {/* ✅ Profile Dropdown */}
               <div
                 ref={menuRef}
                 className="relative"
-                style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}
+                style={
+                  mdUp
+                    ? { transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }
+                    : undefined
+                }
               >
                 {authed ? (
                   <>
@@ -407,7 +478,9 @@ export function Header() {
                       className={`${pill} ${menuOpen || isActive("/account") ? activeGlow : ""} relative shrink-0 !px-2`}
                     >
                       <span className="grid h-7 w-7 place-items-center rounded-full bg-black/35 ring-1 ring-[var(--brand-gold)] shadow-[0_0_12px_rgba(212,175,55,.35)]">
-                        <span className="text-[11px] font-semibold text-[var(--brand-gold)]">{init}</span>
+                        <span className="text-[11px] font-semibold text-[var(--brand-gold)]">
+                          {init}
+                        </span>
                       </span>
                     </button>
 
@@ -420,19 +493,23 @@ export function Header() {
                           bg-black/80 backdrop-blur
                           shadow-[0_20px_80px_rgba(0,0,0,0.55)]
                           overflow-hidden
-                          z-[120]
                         "
                       >
                         <div className="px-3 py-2 border-b border-white/10">
                           <div className="text-xs text-white/55">Signed in as</div>
-                          <div className="text-sm text-white/85 truncate">{session?.user?.email ?? "—"}</div>
+                          <div className="text-sm text-white/85 truncate">
+                            {session?.user?.email ?? "—"}
+                          </div>
                         </div>
 
                         <Link
                           role="menuitem"
                           href="/account"
                           onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                          className="
+                            flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                          "
                         >
                           <User className="h-4 w-4 text-[var(--brand-gold)]" />
                           Account
@@ -442,7 +519,10 @@ export function Header() {
                           role="menuitem"
                           href="/account/orders"
                           onClick={() => setMenuOpen(false)}
-                          className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
+                          className="
+                            flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                          "
                         >
                           <Package className="h-4 w-4 text-[var(--brand-gold)]" />
                           Orders
@@ -489,7 +569,7 @@ export function Header() {
                       aria-label="Cart"
                       aria-haspopup="dialog"
                       aria-expanded={open}
-                      className={`${pill} ${glowClass} relative shrink-0`}
+                      className={`${pill} ${glowClass} relative shrink-0 !px-2`}
                     >
                       <ShoppingCart className="w-5 h-5 text-white transition" aria-hidden="true" />
                       {count > 0 && (
@@ -514,34 +594,33 @@ export function Header() {
             </div>
           </div>
 
-          {/* ✅ Mobile search “second row” (Amazon style) */}
-          {mobileSearchActive ? (
-            <div className="relative z-[110]">
-              {/* subtle peek divider under the panel */}
+          {/* ✅ MOBILE: expanded search row (single search bar; hides top one) */}
+          {mobileSearchOpen ? (
+            <div className="relative z-20 sm:hidden">
+              {/* subtle “peek” divider under the row */}
               <div
-                aria-hidden
+                aria-hidden="true"
                 className="h-[2px] w-full"
                 style={{
                   background:
                     "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                  boxShadow: "0 0 18px rgba(212,175,55,0.22)",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.25)",
                 }}
               />
+
               <div
-                ref={mobileSearchPanelRef}
                 className="
-                  px-3 pb-3 pt-3
-                  bg-black/35
-                  backdrop-blur
-                  border-t border-white/10
-                  overflow-visible
+                  max-w-6xl mx-auto
+                  pt-2 pb-3
+                  pl-[max(0.75rem,env(safe-area-inset-left))]
+                  pr-[max(0.75rem,env(safe-area-inset-right))]
                 "
               >
-                <div className="max-w-6xl mx-auto flex items-center gap-2">
-                  <div className="flex-1 min-w-0 relative z-[120] overflow-visible">
-                    {/* This one is the REAL input + dropdown. */}
+                <div className="flex items-center gap-2">
+                  <div ref={expandedSearchWrapRef} className="relative flex-1 min-w-0">
+                    {/* Keep the “old loupe style” look by using HeaderSearch itself */}
                     <HeaderSearch
-                      placeholder="Search products…"
+                      placeholder="Search"
                       searchRouteBase="/search"
                       productRouteBase="/shop"
                     />
@@ -549,99 +628,86 @@ export function Header() {
 
                   <button
                     type="button"
-                    onClick={() => setMobileSearchActive(false)}
-                    className={`
-                      ${pill}
-                      !px-4
-                      ${activeGlow}
-                      shrink-0
-                    `}
+                    onClick={closeMobileSearch}
+                    className={`${pill} shrink-0`}
                     aria-label="Done searching"
                   >
                     <span className={gradientText}>Done</span>
                   </button>
                 </div>
-
-                {/* another tiny divider to feel “Amazon clean” */}
-                <div
-                  aria-hidden
-                  className="mt-3 h-[1px] w-full"
-                  style={{
-                    background:
-                      "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.55), rgba(212,175,55,0.0))",
-                    opacity: 0.9,
-                  }}
-                />
               </div>
             </div>
           ) : null}
 
-          {/* ✅ Mobile nav panel */}
-          {mobilePanelOpen ? (
-            <div className="md:hidden relative z-[105] px-3 pb-3">
-              {/* peek divider under the panel */}
+          {/* ✅ MOBILE: menu panel */}
+          {mobileOpen ? (
+            <div className="relative z-20 md:hidden">
+              {/* subtle “peek” divider under the mobile panel */}
               <div
-                aria-hidden
+                aria-hidden="true"
                 className="h-[2px] w-full"
                 style={{
                   background:
-                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.8), rgba(212,175,55,0.0))",
                   boxShadow: "0 0 18px rgba(212,175,55,0.22)",
                 }}
               />
 
               <div
                 className="
-                  mt-3 rounded-3xl
-                  border border-[rgba(212,175,55,0.55)]
-                  bg-black/35 backdrop-blur
-                  shadow-[0_18px_60px_rgba(0,0,0,0.45)]
-                  overflow-hidden
+                  max-w-6xl mx-auto
+                  pl-[max(0.75rem,env(safe-area-inset-left))]
+                  pr-[max(0.75rem,env(safe-area-inset-right))]
+                  pb-3
                 "
               >
-                <div className="px-4 pt-3 pb-2 text-xs text-white/65">
-                  Tip: search works great on mobile — products open in the same premium /shop view.
-                </div>
+                <div
+                  className="
+                    mt-2 rounded-3xl
+                    border border-[rgba(212,175,55,0.6)]
+                    bg-black/35 backdrop-blur
+                    shadow-[0_18px_70px_rgba(0,0,0,0.55)]
+                    overflow-hidden
+                  "
+                >
+                  <div className="px-3 py-2 text-xs text-white/60 border-b border-white/10">
+                    Tip: search works great on mobile — products open in the same premium{" "}
+                    <span className="text-white/80">/shop</span> view.
+                  </div>
 
-                <div className="px-4 pb-4 flex flex-wrap gap-3">
-                  <Link
-                    href="/products"
-                    onClick={() => setMobilePanelOpen(false)}
-                    className={`${pill} ${isActive("/shop") ? activeGlow : ""}`}
-                  >
-                    <span className={gradientText}>Shop</span>
-                  </Link>
-                  <Link
-                    href="/about"
-                    onClick={() => setMobilePanelOpen(false)}
-                    className={`${pill} ${isActive("/about") ? activeGlow : ""}`}
-                  >
-                    <span className={gradientText}>About</span>
-                  </Link>
-                  <Link
-                    href="/faq"
-                    onClick={() => setMobilePanelOpen(false)}
-                    className={`${pill} ${isActive("/faq") ? activeGlow : ""}`}
-                  >
-                    <span className={gradientText}>FAQ</span>
-                  </Link>
-                  <Link
-                    href="/coa"
-                    onClick={() => setMobilePanelOpen(false)}
-                    className={`${pill} ${isActive("/coa") ? activeGlow : ""}`}
-                  >
-                    <span className={gradientText}>COA</span>
-                  </Link>
-
-                  {!authed ? (
-                    <Link
-                      href="/sign-in"
-                      onClick={() => setMobilePanelOpen(false)}
-                      className={`${pill}`}
-                    >
-                      <span className={gradientText}>Sign in</span>
+                  <div className="p-3 flex flex-wrap gap-2">
+                    <Link href="/products" className={pill}>
+                      <span className={gradientText}>Shop</span>
                     </Link>
-                  ) : null}
+                    <Link href="/about" className={pill}>
+                      <span className={gradientText}>About</span>
+                    </Link>
+                    <Link href="/faq" className={pill}>
+                      <span className={gradientText}>FAQ</span>
+                    </Link>
+                    <Link href="/coa" className={pill}>
+                      <span className={gradientText}>COA</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={openMobileSearch}
+                      className={pill}
+                      aria-label="Open search"
+                    >
+                      <span className={gradientText}>Search</span>
+                    </button>
+
+                    {!authed ? (
+                      <Link href="/sign-in" className={pill}>
+                        <span className={gradientText}>Sign in</span>
+                      </Link>
+                    ) : (
+                      <Link href="/account" className={pill}>
+                        <span className={gradientText}>Account</span>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
