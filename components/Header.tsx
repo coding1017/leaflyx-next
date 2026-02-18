@@ -4,15 +4,7 @@
 import AnnouncementBar from "./AnnouncementBar";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import {
-  ShoppingCart,
-  User,
-  LogOut,
-  Package,
-  SlidersHorizontal,
-  Menu,
-  X,
-} from "lucide-react";
+import { ShoppingCart, User, LogOut, Package, SlidersHorizontal, Menu, X } from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
@@ -22,6 +14,7 @@ import { useSession, signOut } from "next-auth/react";
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
 import { useHeaderLayoutTuner } from "./header/useHeaderLayoutTuner";
 
+// Amazon-style search dropdown component
 import HeaderSearch from "@/components/HeaderSearch";
 
 function initialsFrom(name?: string | null, email?: string | null) {
@@ -33,6 +26,11 @@ function initialsFrom(name?: string | null, email?: string | null) {
   return (a + b).toUpperCase();
 }
 
+/**
+ * Amazon-style progressive header:
+ * - after `minY`, the header translates by the exact scroll delta
+ * - clamps so `peekPx` remains visible when fully hidden
+ */
 function useProgressiveHeader(opts: {
   minY: number;
   headerH: number;
@@ -103,6 +101,8 @@ export function Header() {
   const count = typeof ctxCount === "number" ? ctxCount : computedCount;
 
   const pathname = usePathname();
+
+  // NextAuth session
   const { data: session, status } = useSession();
   const authed = status === "authenticated";
   const init = useMemo(
@@ -110,63 +110,47 @@ export function Header() {
     [session?.user]
   );
 
+  // Profile dropdown
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const mobilePanelRef = useRef<HTMLDivElement | null>(null);
-
-  // ✅ Mobile Search expands into “second row” (no blur/overlay)
-  const [searchRowOpen, setSearchRowOpen] = useState(false);
-  const searchRowRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    setMenuOpen(false);
-    setMobileOpen(false);
-    setSearchRowOpen(false);
-  }, [pathname]);
+  // Mobile nav panel + mobile search panel
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  const [mobileSearchActive, setMobileSearchActive] = useState(false);
+  const mobileSearchPanelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         setMenuOpen(false);
-        setMobileOpen(false);
-        setSearchRowOpen(false);
+        setMobilePanelOpen(false);
+        setMobileSearchActive(false);
       }
     }
-
     function onClickOutside(e: MouseEvent) {
-      const t = e.target as Node;
-
-      if (menuOpen && menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
-      if (mobileOpen && mobilePanelRef.current && !mobilePanelRef.current.contains(t)) setMobileOpen(false);
-
-      // close search row when tapping outside it
-      if (searchRowOpen && searchRowRef.current && !searchRowRef.current.contains(t)) {
-        setSearchRowOpen(false);
-      }
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
-
     window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onClickOutside);
-
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onClickOutside);
     };
-  }, [menuOpen, mobileOpen, searchRowOpen]);
+  }, []);
 
-  // Auto-focus the input inside the expanded row
+  // When mobile search activates, focus the input inside the panel (HeaderSearch renders an input)
   useEffect(() => {
-    if (!searchRowOpen) return;
+    if (!mobileSearchActive) return;
     const id = requestAnimationFrame(() => {
-      const el = searchRowRef.current;
+      const el = mobileSearchPanelRef.current;
       const input = el?.querySelector("input") as HTMLInputElement | null;
-      input?.focus?.();
+      input?.focus();
     });
     return () => cancelAnimationFrame(id);
-  }, [searchRowOpen]);
+  }, [mobileSearchActive]);
 
+  // Shared styles
   const pill =
     "group inline-flex items-center justify-center rounded-2xl px-3 py-1.5 " +
     "bg-black/40 hover:bg-black/60 transition text-sm " +
@@ -182,36 +166,26 @@ export function Header() {
   const subtleGlow =
     "ring-1 ring-yellow-300/35 shadow-[0_0_18px_rgba(250,204,21,0.28),0_0_36px_rgba(250,204,21,0.22)]";
 
-  const hamburgerGlowOpen =
-    "ring-2 ring-yellow-300/70 shadow-[0_0_24px_#facc15,0_0_60px_rgba(250,204,21,0.55)]";
-
   const isActive = (href: string) => {
     if (!pathname) return false;
     if (href === "/") return pathname === "/";
     if (href === "/shop") {
-      return pathname.startsWith("/products") || pathname.startsWith("/category") || pathname.startsWith("/shop");
+      return (
+        pathname.startsWith("/products") ||
+        pathname.startsWith("/category") ||
+        pathname.startsWith("/shop")
+      );
     }
     return pathname.startsWith(href);
   };
 
-  const NavLink = ({
-    href,
-    label,
-    onClick,
-    className,
-  }: {
-    href: string;
-    label: string;
-    onClick?: () => void;
-    className?: string;
-  }) => {
+  const NavLink = ({ href, label }: { href: string; label: string }) => {
     const active = isActive(href);
     return (
       <Link
         href={href}
-        onClick={onClick}
         aria-current={active ? "page" : undefined}
-        className={`${pill} ${active ? activeGlow : ""} ${className ?? ""}`}
+        className={`${pill} ${active ? activeGlow : ""}`}
       >
         <span className={gradientText}>{label}</span>
       </Link>
@@ -220,14 +194,14 @@ export function Header() {
 
   async function doSignOut() {
     setMenuOpen(false);
-    setMobileOpen(false);
-    setSearchRowOpen(false);
     await signOut({ callbackUrl: "/" });
   }
 
+  // Header tuner (dev only)
   const { tuner, clampPatch, reset } = useHeaderLayoutTuner();
   const [tuneOpen, setTuneOpen] = useState(false);
 
+  // Measure header height
   const headerRef = useRef<HTMLElement | null>(null);
   const [headerH, setHeaderH] = useState(0);
 
@@ -241,6 +215,7 @@ export function Header() {
     };
 
     measure();
+
     const ro = new ResizeObserver(() => measure());
     ro.observe(el);
 
@@ -251,15 +226,28 @@ export function Header() {
     };
   }, []);
 
+  // Progressive hide
+  const PEEK = 8;
+  const HIDE_AFTER = 150;
+
   const hideOffset = useProgressiveHeader({
-    minY: 150,
+    minY: HIDE_AFTER,
     headerH,
-    peekPx: 8,
+    peekPx: PEEK,
     jitterPx: 2,
   });
 
+  // Close mobile overlays when route changes
+  useEffect(() => {
+    setMobilePanelOpen(false);
+    setMobileSearchActive(false);
+  }, [pathname]);
+
+  const hamburgerOpen = mobilePanelOpen;
+
   return (
     <>
+      {/* Spacer so content never jumps */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
       <header
@@ -267,14 +255,6 @@ export function Header() {
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
         style={{ transform: `translateY(-${hideOffset}px)` }}
       >
-        {/* Make iOS inputs readable + prevent weird zoom */}
-        <style jsx global>{`
-          .leaflyx-mobile-search-row input {
-            font-size: 16px !important;
-            line-height: 1.2 !important;
-          }
-        `}</style>
-
         <div
           className="
             relative
@@ -283,28 +263,45 @@ export function Header() {
             hover:from-[rgba(212,175,55,0.45)] hover:via-[rgba(180,140,40,0.45)] hover:to-[rgba(212,175,55,0.45)]
             border-b-2 border-[#d4af37]
             shadow-[inset_0_1px_8px_rgba(255,255,255,0.1),0_2px_12px_rgba(0,0,0,0.35)]
-            transition-colors overflow-visible
+            transition-colors
+            overflow-visible
           "
+          style={{
+            paddingLeft: "env(safe-area-inset-left)",
+            paddingRight: "env(safe-area-inset-right)",
+          }}
         >
+          {/* Golden hazes */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,230,180,0.15),transparent_75%)]" />
+
+          {/* Highlight line */}
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.4)] to-transparent z-20" />
 
-          {/* Row 1 */}
+          {/* Content row */}
           <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
-            {/* Left: ☰ + Leaflyx */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setMobileOpen((v) => !v)}
-                aria-label={mobileOpen ? "Close menu" : "Open menu"}
-                aria-expanded={mobileOpen}
-                className={`${pill} md:hidden relative shrink-0 !px-2 ${mobileOpen ? `${activeGlow} ${hamburgerGlowOpen}` : ""}`}
-              >
-                {mobileOpen ? <X className="h-5 w-5 text-white/90" /> : <Menu className="h-5 w-5 text-white/90" />}
-              </button>
+            {/* Mobile: Hamburger (far left) */}
+            <button
+              type="button"
+              className={`
+                md:hidden
+                ${pill} !px-2 shrink-0
+                ${hamburgerOpen ? activeGlow : ""}
+              `}
+              aria-label={hamburgerOpen ? "Close menu" : "Open menu"}
+              aria-expanded={hamburgerOpen}
+              onClick={() => setMobilePanelOpen((v) => !v)}
+            >
+              {hamburgerOpen ? (
+                <X className="h-5 w-5 text-white/90" />
+              ) : (
+                <Menu className="h-5 w-5 text-white/90" />
+              )}
+            </button>
 
+            {/* Brand */}
+            <div className="flex items-center gap-2 min-w-0 shrink-0">
               <Link
                 href="/"
                 aria-current={isActive("/") ? "page" : undefined}
@@ -312,32 +309,11 @@ export function Header() {
               >
                 <span className={`font-semibold tracking-tight ${gradientText}`}>Leaflyx</span>
               </Link>
+              <span className="hidden sm:inline text-xs opacity-80">Premium THCA goods</span>
             </div>
 
-            {/* Middle: compact search trigger (tap opens row 2) */}
-            <div className="flex-1 min-w-0 md:hidden">
-              {!searchRowOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setSearchRowOpen(true)}
-                  className="
-                    w-full rounded-2xl px-3 py-2
-                    bg-black/25 hover:bg-black/35
-                    border border-white/10
-                    text-left
-                    flex items-center gap-2
-                  "
-                  aria-label="Open search"
-                >
-                  <span className="text-white/60">Search products…</span>
-                </button>
-              ) : (
-                <div className="h-[40px]" aria-hidden="true" />
-              )}
-            </div>
-
-            {/* Desktop center: nav + search (unchanged) */}
-            <div className="hidden md:flex flex-1 items-center justify-center" style={{ gap: `${tuner.centerGap}px` }}>
+            {/* Center: Desktop nav + search */}
+            <div className="flex-1 flex items-center justify-center" style={{ gap: `${tuner.centerGap}px` }}>
               <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
                 <ShopMenu
                   active={isActive("/shop")}
@@ -350,6 +326,7 @@ export function Header() {
                 <NavLink href="/coa" label="COA" />
               </nav>
 
+              {/* Desktop search */}
               <div
                 className="relative hidden sm:block"
                 role="search"
@@ -359,12 +336,39 @@ export function Header() {
                   transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
                 }}
               >
-                <HeaderSearch placeholder="Search products…" searchRouteBase="/search" productRouteBase="/shop" />
+                <HeaderSearch
+                  placeholder="Search products…"
+                  searchRouteBase="/search"
+                  productRouteBase="/shop"
+                />
+              </div>
+
+              {/* Mobile resting search (looks like before) */}
+              <div className="sm:hidden flex-1 min-w-0">
+                <div
+                  className={`
+                    relative
+                    rounded-2xl
+                    bg-white/85
+                    border border-black/30
+                    shadow-[0_10px_24px_rgba(0,0,0,0.18)]
+                    ring-1 ring-[rgba(212,175,55,0.55)]
+                    px-3 py-2
+                    flex items-center gap-2
+                    cursor-text
+                  `}
+                  onClick={() => setMobileSearchActive(true)}
+                  role="button"
+                  aria-label="Search products"
+                >
+                  <span className="text-black/70">🔎</span>
+                  <span className="text-black/60 text-sm truncate">Search products…</span>
+                </div>
               </div>
             </div>
 
             {/* Right cluster */}
-            <div className="ml-auto flex items-center shrink-0" style={{ gap: `${tuner.rightGap}px` }}>
+            <div className="ml-auto flex items-center" style={{ gap: `${tuner.rightGap}px` }}>
               {process.env.NODE_ENV === "development" ? (
                 <div className="relative hidden md:block">
                   <button
@@ -386,8 +390,12 @@ export function Header() {
                 </div>
               ) : null}
 
-              {/* Profile dropdown */}
-              <div ref={menuRef} className="relative" style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}>
+              {/* Profile Dropdown */}
+              <div
+                ref={menuRef}
+                className="relative"
+                style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}
+              >
                 {authed ? (
                   <>
                     <button
@@ -412,6 +420,7 @@ export function Header() {
                           bg-black/80 backdrop-blur
                           shadow-[0_20px_80px_rgba(0,0,0,0.55)]
                           overflow-hidden
+                          z-[120]
                         "
                       >
                         <div className="px-3 py-2 border-b border-white/10">
@@ -443,7 +452,11 @@ export function Header() {
                           type="button"
                           role="menuitem"
                           onClick={doSignOut}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10 border-t border-white/10"
+                          className="
+                            w-full flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                            border-t border-white/10
+                          "
                         >
                           <LogOut className="h-4 w-4 text-[var(--brand-gold)]" />
                           Sign out
@@ -452,7 +465,12 @@ export function Header() {
                     ) : null}
                   </>
                 ) : (
-                  <Link href="/sign-in" aria-label="Sign in" title="Sign in" className={`${pill} relative shrink-0 !px-2`}>
+                  <Link
+                    href="/sign-in"
+                    aria-label="Sign in"
+                    title="Sign in"
+                    className={`${pill} relative shrink-0 !px-2`}
+                  >
                     <User className="h-5 w-5 text-white" aria-hidden="true" />
                   </Link>
                 )}
@@ -496,105 +514,138 @@ export function Header() {
             </div>
           </div>
 
-          {/* ✅ Row 2: expanded search drawer (no blur overlay) */}
-          {searchRowOpen ? (
-            <div className="relative z-10 md:hidden px-3 pb-3">
+          {/* ✅ Mobile search “second row” (Amazon style) */}
+          {mobileSearchActive ? (
+            <div className="relative z-[110]">
+              {/* subtle peek divider under the panel */}
               <div
-                ref={searchRowRef}
+                aria-hidden
+                className="h-[2px] w-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.22)",
+                }}
+              />
+              <div
+                ref={mobileSearchPanelRef}
                 className="
-                  leaflyx-mobile-search-row
-                  rounded-3xl border border-[#d4af37]/65
-                  bg-black/55 backdrop-blur-md
-                  shadow-[0_18px_80px_rgba(0,0,0,0.55)]
-                  overflow-hidden
-                  p-2
+                  px-3 pb-3 pt-3
+                  bg-black/35
+                  backdrop-blur
+                  border-t border-white/10
+                  overflow-visible
                 "
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <HeaderSearch placeholder="Search products…" searchRouteBase="/search" productRouteBase="/shop" />
+                <div className="max-w-6xl mx-auto flex items-center gap-2">
+                  <div className="flex-1 min-w-0 relative z-[120] overflow-visible">
+                    {/* This one is the REAL input + dropdown. */}
+                    <HeaderSearch
+                      placeholder="Search products…"
+                      searchRouteBase="/search"
+                      productRouteBase="/shop"
+                    />
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setSearchRowOpen(false)}
-                    className="shrink-0 rounded-2xl px-3 py-2 text-sm font-semibold"
-                    style={{
-                      border: "1px solid rgba(212,175,55,0.7)",
-                      color: "#d4af37",
-                      background: "rgba(0,0,0,0.35)",
-                      boxShadow: "0 0 18px rgba(212,175,55,0.18)",
-                    }}
-                    aria-label="Close search"
+                    onClick={() => setMobileSearchActive(false)}
+                    className={`
+                      ${pill}
+                      !px-4
+                      ${activeGlow}
+                      shrink-0
+                    `}
+                    aria-label="Done searching"
                   >
-                    Done
+                    <span className={gradientText}>Done</span>
                   </button>
                 </div>
 
+                {/* another tiny divider to feel “Amazon clean” */}
                 <div
                   aria-hidden
-                  className="mt-2 h-[2px] rounded-full"
+                  className="mt-3 h-[1px] w-full"
                   style={{
                     background:
-                      "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                    boxShadow: "0 0 18px rgba(212,175,55,0.35)",
-                    opacity: 0.95,
+                      "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.55), rgba(212,175,55,0.0))",
+                    opacity: 0.9,
                   }}
                 />
               </div>
             </div>
           ) : null}
 
-          {/* Mobile menu panel + divider */}
-          <div className={`md:hidden relative z-10 px-3 pb-3 ${mobileOpen ? "block" : "hidden"}`}>
-            <div
-              ref={mobilePanelRef}
-              className="
-                mt-2 rounded-3xl border border-[#d4af37]/55
-                bg-black/55 backdrop-blur-md
-                shadow-[0_18px_80px_rgba(0,0,0,0.55)]
-                overflow-hidden
-              "
-            >
-              <div className="p-3 flex flex-wrap gap-2">
-                <NavLink href="/products" label="Shop" onClick={() => setMobileOpen(false)} className="!px-6" />
-                <NavLink href="/about" label="About" onClick={() => setMobileOpen(false)} />
-                <NavLink href="/faq" label="FAQ" onClick={() => setMobileOpen(false)} />
-                <NavLink href="/coa" label="COA" onClick={() => setMobileOpen(false)} />
+          {/* ✅ Mobile nav panel */}
+          {mobilePanelOpen ? (
+            <div className="md:hidden relative z-[105] px-3 pb-3">
+              {/* peek divider under the panel */}
+              <div
+                aria-hidden
+                className="h-[2px] w-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.22)",
+                }}
+              />
 
-                {authed ? (
-                  <>
-                    <Link
-                      href="/account"
-                      onClick={() => setMobileOpen(false)}
-                      className={`${pill} ${isActive("/account") ? activeGlow : ""}`}
-                    >
-                      <span className={gradientText}>Account</span>
-                    </Link>
+              <div
+                className="
+                  mt-3 rounded-3xl
+                  border border-[rgba(212,175,55,0.55)]
+                  bg-black/35 backdrop-blur
+                  shadow-[0_18px_60px_rgba(0,0,0,0.45)]
+                  overflow-hidden
+                "
+              >
+                <div className="px-4 pt-3 pb-2 text-xs text-white/65">
+                  Tip: search works great on mobile — products open in the same premium /shop view.
+                </div>
 
-                    <button type="button" onClick={doSignOut} className={`${pill} border border-white/10`}>
-                      <span className={gradientText}>Sign out</span>
-                    </button>
-                  </>
-                ) : (
-                  <Link href="/sign-in" onClick={() => setMobileOpen(false)} className={`${pill} border border-white/10`}>
-                    <span className={gradientText}>Sign in</span>
+                <div className="px-4 pb-4 flex flex-wrap gap-3">
+                  <Link
+                    href="/products"
+                    onClick={() => setMobilePanelOpen(false)}
+                    className={`${pill} ${isActive("/shop") ? activeGlow : ""}`}
+                  >
+                    <span className={gradientText}>Shop</span>
                   </Link>
-                )}
+                  <Link
+                    href="/about"
+                    onClick={() => setMobilePanelOpen(false)}
+                    className={`${pill} ${isActive("/about") ? activeGlow : ""}`}
+                  >
+                    <span className={gradientText}>About</span>
+                  </Link>
+                  <Link
+                    href="/faq"
+                    onClick={() => setMobilePanelOpen(false)}
+                    className={`${pill} ${isActive("/faq") ? activeGlow : ""}`}
+                  >
+                    <span className={gradientText}>FAQ</span>
+                  </Link>
+                  <Link
+                    href="/coa"
+                    onClick={() => setMobilePanelOpen(false)}
+                    className={`${pill} ${isActive("/coa") ? activeGlow : ""}`}
+                  >
+                    <span className={gradientText}>COA</span>
+                  </Link>
+
+                  {!authed ? (
+                    <Link
+                      href="/sign-in"
+                      onClick={() => setMobilePanelOpen(false)}
+                      className={`${pill}`}
+                    >
+                      <span className={gradientText}>Sign in</span>
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             </div>
-
-            <div
-              aria-hidden
-              className="mx-2 mt-2 h-[2px] rounded-full"
-              style={{
-                background:
-                  "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                boxShadow: "0 0 18px rgba(212,175,55,0.35)",
-                opacity: 0.95,
-              }}
-            />
-          </div>
+          ) : null}
         </div>
 
         <AnnouncementBar />
