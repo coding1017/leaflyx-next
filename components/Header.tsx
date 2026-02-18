@@ -17,7 +17,7 @@ import {
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
@@ -243,31 +243,45 @@ export function Header() {
   const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mobileSearchWrapRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-focus the expanded search input (keyboard pops)
-  useEffect(() => {
-    if (!mobileSearchOpen) return;
+  function collapseMobileSearch() {
+    setMobileSearchOpen(false);
+  }
 
-    const id = requestAnimationFrame(() => {
+  // ✅ iOS Safari is picky: focusing in an effect can be ignored.
+  // We do multiple focus attempts over a few ticks to make it stick.
+  function focusExpandedSearch() {
+    const tryFocus = () => {
       const input = mobileSearchWrapRef.current?.querySelector(
         "input, textarea, [contenteditable='true']"
       ) as HTMLInputElement | null;
 
-      if (input) {
-        try {
-          input.focus({ preventScroll: true } as any);
-          // put cursor at end
-          const v = input.value ?? "";
-          input.setSelectionRange?.(v.length, v.length);
-        } catch {
-          // ignore
-        }
-      }
-    });
+      if (!input) return false;
 
-    return () => cancelAnimationFrame(id);
+      try {
+        input.focus();
+        const v = input.value ?? "";
+        input.setSelectionRange?.(v.length, v.length);
+      } catch {
+        // ignore
+      }
+      return true;
+    };
+
+    // attempt now + next frames (works better on real iPhones)
+    tryFocus();
+    requestAnimationFrame(() => tryFocus());
+    setTimeout(() => tryFocus(), 0);
+    setTimeout(() => tryFocus(), 50);
+    setTimeout(() => tryFocus(), 120);
+  }
+
+  // When opened, attempt focus (keyboard)
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    focusExpandedSearch();
   }, [mobileSearchOpen]);
 
-  // Click outside closes the expanded search (no “Done” required)
+  // ✅ Tap outside closes BOTH dropdown + expanded row
   useEffect(() => {
     if (!mobileSearchOpen) return;
 
@@ -279,11 +293,38 @@ export function Header() {
 
       if (inExpanded || inTrigger) return;
 
-      setMobileSearchOpen(false);
+      collapseMobileSearch();
     };
 
     window.addEventListener("pointerdown", onPointerDown, true);
     return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [mobileSearchOpen]);
+
+  // ✅ If focus leaves the expanded area entirely, collapse (fixes “dropdown closed but expanded row stays”)
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+
+    const onFocusIn = () => {
+      // no-op; we just track focus existence
+    };
+
+    const onFocusOut = () => {
+      // next tick: check where focus landed
+      setTimeout(() => {
+        const wrap = mobileSearchWrapRef.current;
+        if (!wrap) return;
+        const active = document.activeElement;
+        if (active && wrap.contains(active)) return;
+        collapseMobileSearch();
+      }, 0);
+    };
+
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", onFocusOut);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", onFocusOut);
+    };
   }, [mobileSearchOpen]);
 
   // Close mobile panel/search on route change (feels “native”)
@@ -297,10 +338,6 @@ export function Header() {
     paddingLeft: "calc(0.75rem + env(safe-area-inset-left))",
     paddingRight: "calc(0.75rem + env(safe-area-inset-right))",
   };
-
-  // Small search pill (resting) styled like the expanded one
-  const smallSearchPill =
-    "hidden sm:hidden md:hidden lg:hidden"; // not used on desktop
 
   const mobileSmallSearch =
     "flex-1 min-w-0 h-[40px] rounded-full " +
@@ -347,10 +384,7 @@ export function Header() {
           {/* Content */}
           <div className="relative z-10 max-w-6xl mx-auto px-3 py-2 flex flex-col gap-2">
             {/* TOP ROW */}
-            <div
-              className="flex items-center gap-3"
-              style={safePadStyle}
-            >
+            <div className="flex items-center gap-3" style={safePadStyle}>
               {/* Mobile hamburger (left) */}
               <button
                 type="button"
@@ -383,9 +417,12 @@ export function Header() {
                   ref={mobileSearchTriggerRef}
                   type="button"
                   onClick={() => {
-                    // close menu if open (clean UX)
                     setMobileNavOpen(false);
                     setMobileSearchOpen(true);
+
+                    // ✅ attempt focus immediately from the same user gesture
+                    // (best chance for iOS to open keyboard)
+                    setTimeout(() => focusExpandedSearch(), 0);
                   }}
                   aria-label="Search"
                   className={`md:hidden ${mobileSmallSearch}`}
@@ -396,7 +433,6 @@ export function Header() {
                   </div>
                 </button>
               ) : (
-                // placeholder spacer so layout doesn’t jump while expanded row is showing
                 <div className="md:hidden flex-1 min-w-0" />
               )}
 
@@ -472,10 +508,7 @@ export function Header() {
                             role="menuitem"
                             href="/account"
                             onClick={() => setMenuOpen(false)}
-                            className="
-                              flex items-center gap-2 px-3 py-2
-                              text-sm text-white/85 hover:bg-white/10
-                            "
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
                           >
                             <User className="h-4 w-4 text-[var(--brand-gold)]" />
                             Account
@@ -485,10 +518,7 @@ export function Header() {
                             role="menuitem"
                             href="/account/orders"
                             onClick={() => setMenuOpen(false)}
-                            className="
-                              flex items-center gap-2 px-3 py-2
-                              text-sm text-white/85 hover:bg-white/10
-                            "
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
                           >
                             <Package className="h-4 w-4 text-[var(--brand-gold)]" />
                             Orders
@@ -498,11 +528,7 @@ export function Header() {
                             type="button"
                             role="menuitem"
                             onClick={doSignOut}
-                            className="
-                              w-full flex items-center gap-2 px-3 py-2
-                              text-sm text-white/85 hover:bg-white/10
-                              border-t border-white/10
-                            "
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10 border-t border-white/10"
                           >
                             <LogOut className="h-4 w-4 text-[var(--brand-gold)]" />
                             Sign out
@@ -560,13 +586,9 @@ export function Header() {
               </div>
             </div>
 
-            {/* ✅ MOBILE: Expanded search row (auto-focus, closes on outside click) */}
+            {/* ✅ MOBILE: Expanded search row */}
             {mobileSearchOpen ? (
-              <div
-                ref={mobileSearchWrapRef}
-                className="md:hidden"
-                style={safePadStyle}
-              >
+              <div ref={mobileSearchWrapRef} className="md:hidden" style={safePadStyle}>
                 <div
                   className="
                     rounded-3xl border border-[#d4af37]
@@ -583,7 +605,21 @@ export function Header() {
                     />
                   </div>
 
-                  {/* subtle “peek” divider under the expanded panel */}
+                  {/* Keep Done button (you asked to keep it) */}
+                  <div className="mt-2 flex justify-end px-1">
+                    <button
+                      type="button"
+                      onClick={collapseMobileSearch}
+                      className="
+                        rounded-full px-4 py-2 text-sm font-semibold
+                        bg-black/45 border border-[#d4af37]
+                        text-lime-200 shadow-[0_0_22px_rgba(212,175,55,0.22)]
+                      "
+                    >
+                      Done
+                    </button>
+                  </div>
+
                   <div
                     aria-hidden="true"
                     className="mt-2 h-[2px] w-full rounded-full"
@@ -694,7 +730,6 @@ export function Header() {
                     Tip: tap <span className="text-[var(--brand-gold)]">Search</span> to open the full dropdown + keyboard.
                   </div>
 
-                  {/* subtle “peek” divider under the mobile panel */}
                   <div
                     aria-hidden="true"
                     className="mt-3 h-[2px] w-full rounded-full"
