@@ -12,12 +12,11 @@ import {
   SlidersHorizontal,
   Menu,
   X,
-  Search,
 } from "lucide-react";
 import ShopMenu from "./ShopMenu";
 import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
@@ -48,12 +47,13 @@ function useProgressiveHeader(opts: {
 }) {
   const { minY, headerH, peekPx, jitterPx = 2 } = opts;
 
-  const maxHide = Math.max(0, headerH - peekPx);
-  const [offset, setOffset] = useState(0);
+  const maxHide = Math.max(0, headerH - peekPx); // px the header can slide up
+  const [offset, setOffset] = useState(0); // 0..maxHide
 
   const lastYRef = useRef(0);
   const tickingRef = useRef(false);
 
+  // Clamp offset if header height changes
   useEffect(() => {
     setOffset((v) => Math.min(Math.max(v, 0), maxHide));
   }, [maxHide]);
@@ -69,14 +69,16 @@ function useProgressiveHeader(opts: {
 
       requestAnimationFrame(() => {
         const lastY = lastYRef.current;
-        const diff = y - lastY;
+        const diff = y - lastY; // + down, - up
 
+        // Ignore tiny jitter to keep trackpads silky
         if (Math.abs(diff) < jitterPx) {
           lastYRef.current = y;
           tickingRef.current = false;
           return;
         }
 
+        // Before threshold: fully shown
         if (y < minY || maxHide === 0) {
           setOffset(0);
           lastYRef.current = y;
@@ -84,6 +86,7 @@ function useProgressiveHeader(opts: {
           return;
         }
 
+        // After threshold: move by exact delta, clamp to [0..maxHide]
         setOffset((prev) => {
           const next = prev + diff;
           return Math.min(Math.max(next, 0), maxHide);
@@ -120,27 +123,25 @@ export function Header() {
     [session?.user]
   );
 
-  // Dropdown state
+  // Desktop profile dropdown state
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Use pointer events to avoid MouseEvent vs TouchEvent overload issues
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setMenuOpen(false);
     }
-    function onPointerDown(e: PointerEvent) {
+    function onClickOutside(e: MouseEvent) {
       if (!menuRef.current) return;
       if (!menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     }
-
     if (menuOpen) {
       window.addEventListener("keydown", onKey);
-      window.addEventListener("pointerdown", onPointerDown, true);
+      window.addEventListener("mousedown", onClickOutside);
     }
     return () => {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("mousedown", onClickOutside);
     };
   }, [menuOpen]);
 
@@ -193,9 +194,56 @@ export function Header() {
     await signOut({ callbackUrl: "/" });
   }
 
-  // ✅ Header tuner
+  // ✅ Header tuner (only meaningful desktop)
   const { tuner, clampPatch, reset } = useHeaderLayoutTuner();
   const [tuneOpen, setTuneOpen] = useState(false);
+
+  // Track desktop breakpoint so we don't apply tuner transforms on mobile (fixes cut-off)
+  const [mdUp, setMdUp] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia("(min-width: 768px)");
+    const apply = () => setMdUp(!!m.matches);
+    apply();
+    m.addEventListener?.("change", apply);
+    return () => m.removeEventListener?.("change", apply);
+  }, []);
+
+  // ---- Mobile: hamburger menu + expanded search row ----
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const expandedSearchWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close mobile drawers on route change
+  useEffect(() => {
+    setMobileOpen(false);
+    setMobileSearchOpen(false);
+  }, [pathname]);
+
+  // ESC closes mobile drawers (desktop keyboards)
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        setMobileSearchOpen(false);
+      }
+    }
+    if (mobileOpen || mobileSearchOpen) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen, mobileSearchOpen]);
+
+  // When expanded search opens, focus the input inside so iOS pops the keyboard
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+    const t = window.setTimeout(() => {
+      const root = expandedSearchWrapRef.current;
+      const input = root?.querySelector("input") as HTMLInputElement | null;
+      input?.focus?.();
+      try {
+        input?.setSelectionRange?.(input.value.length, input.value.length);
+      } catch {}
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [mobileSearchOpen]);
 
   // Measure header height so spacer matches exactly (AnnouncementBar included)
   const headerRef = useRef<HTMLElement | null>(null);
@@ -233,96 +281,27 @@ export function Header() {
     jitterPx: 2,
   });
 
-  // -------------------------
-  // ✅ Mobile: hamburger + panel
-  // -------------------------
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  // -------------------------
-  // ✅ Mobile: tap small search => open expanded row + keyboard
-  // -------------------------
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const mobileSearchTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const mobileSearchWrapRef = useRef<HTMLDivElement | null>(null);
-
-  function collapseMobileSearch() {
+  // Close mobile menu if you open search (and vice-versa)
+  function openMobileSearch() {
+    setMobileOpen(false);
+    setMobileSearchOpen(true);
+  }
+  function closeMobileSearch() {
     setMobileSearchOpen(false);
   }
-
-  // iOS Safari focus helper
-  function focusExpandedSearch() {
-    const tryFocus = () => {
-      const input = mobileSearchWrapRef.current?.querySelector("input") as HTMLInputElement | null;
-      if (!input) return false;
-      try {
-        input.focus();
-        const v = input.value ?? "";
-        input.setSelectionRange?.(v.length, v.length);
-      } catch {
-        // ignore
-      }
-      return true;
-    };
-
-    tryFocus();
-    requestAnimationFrame(() => tryFocus());
-    setTimeout(() => tryFocus(), 0);
-    setTimeout(() => tryFocus(), 50);
-    setTimeout(() => tryFocus(), 120);
-  }
-
-  useEffect(() => {
-    if (!mobileSearchOpen) return;
-    focusExpandedSearch();
-  }, [mobileSearchOpen]);
-
-  // Tap outside closes expanded row
-  useEffect(() => {
-    if (!mobileSearchOpen) return;
-
-    const onPointerDown = (e: PointerEvent) => {
-      const t = e.target as Node;
-      const inExpanded = !!mobileSearchWrapRef.current?.contains(t);
-      const inTrigger = !!mobileSearchTriggerRef.current?.contains(t);
-      if (inExpanded || inTrigger) return;
-      collapseMobileSearch();
-    };
-
-    window.addEventListener("pointerdown", onPointerDown, true);
-    return () => window.removeEventListener("pointerdown", onPointerDown, true);
-  }, [mobileSearchOpen]);
-
-  // Close mobile panel/search on route change
-  useEffect(() => {
-    setMobileNavOpen(false);
-    setMobileSearchOpen(false);
-  }, [pathname]);
-
-  // ✅ tighter safe-area padding => hamburger left + cart right + wider small search
-  const safePadStyle: React.CSSProperties = {
-    paddingLeft: "calc(0.25rem + env(safe-area-inset-left))",
-    paddingRight: "calc(0.25rem + env(safe-area-inset-right))",
-  };
-
-  const mobileSmallSearch =
-    "flex-1 min-w-0 h-[40px] rounded-full " +
-    "bg-[rgba(255,255,255,0.72)] " +
-    "border border-[rgba(10,40,30,0.55)] " +
-    "shadow-[0_8px_24px_rgba(0,0,0,0.22),0_0_0_2px_rgba(212,175,55,0.18)] " +
-    "text-[rgba(10,25,18,0.9)]";
-
-  const mobileSmallSearchInner = "w-full h-full flex items-center gap-2 px-3";
 
   return (
     <>
       {/* Spacer that shrinks/grows continuously so content never "jumps" */}
       <div aria-hidden="true" style={{ height: Math.max(0, headerH - hideOffset) }} />
 
-      {/* Fixed header */}
+      {/* Fixed header that moves by the exact scroll delta */}
       <header
         ref={headerRef as any}
         className="fixed top-0 left-0 right-0 z-50 will-change-transform"
-        style={{ transform: `translateY(-${hideOffset}px)` }}
+        style={{
+          transform: `translateY(-${hideOffset}px)`,
+        }}
       >
         <div
           className="
@@ -335,222 +314,317 @@ export function Header() {
             transition-colors overflow-visible
           "
         >
-          {/* Hazes */}
+          {/* Golden hazes */}
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_right,rgba(255,220,150,0.25),transparent_70%)]" />
           <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,rgba(255,230,180,0.15),transparent_75%)]" />
+
+          {/* Highlight line */}
           <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.4)] to-transparent z-20" />
 
-          <div className="relative z-10 max-w-6xl mx-auto px-2 py-2 flex flex-col gap-2">
-            {/* TOP ROW */}
-            <div className="flex items-center gap-2" style={safePadStyle}>
-              {/* Hamburger */}
-              <button
-                type="button"
-                aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
-                onClick={() => setMobileNavOpen((v) => !v)}
-                className={`${pill} !px-1.5 shrink-0 ${mobileNavOpen ? activeGlow : ""} md:hidden`}
-              >
-                {mobileNavOpen ? (
-                  <X className="h-5 w-5 text-white/90" />
-                ) : (
-                  <Menu className="h-5 w-5 text-white/90" />
-                )}
-              </button>
+          {/* Content */}
+          <div
+            className="
+              relative z-10 max-w-6xl mx-auto
+              py-2 flex items-center gap-2
+              overflow-visible
+              pl-[max(0.75rem,env(safe-area-inset-left))]
+              pr-[max(0.75rem,env(safe-area-inset-right))]
+            "
+          >
+            {/* MOBILE: Hamburger (far left) */}
+            <button
+              type="button"
+              onClick={() => {
+                // toggle menu; if search is open, close it first
+                setMobileSearchOpen(false);
+                setMobileOpen((v) => !v);
+              }}
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              className={`
+                ${pill} !px-2 shrink-0 md:hidden
+                ${mobileOpen ? activeGlow : ""}
+              `}
+            >
+              {mobileOpen ? (
+                <X className="h-5 w-5 text-white/90" />
+              ) : (
+                <Menu className="h-5 w-5 text-white/90" />
+              )}
+            </button>
 
-              {/* Brand */}
-              <div className="flex items-center gap-2 min-w-0 shrink-0">
-                <Link
-                  href="/"
-                  aria-current={isActive("/") ? "page" : undefined}
-                  className={`${pill} gap-2 shrink-0 ${isActive("/") ? activeGlow : ""}`}
-                >
-                  <span className={`font-semibold tracking-tight ${gradientText}`}>Leaflyx</span>
-                </Link>
+            {/* Brand */}
+<div className="flex items-center gap-4 min-w-0 shrink-0">
+  <Link
+    href="/"
+    aria-current={isActive("/") ? "page" : undefined}
+    className={`${pill} gap-2 shrink-0 ${isActive("/") ? activeGlow : ""}`}
+  >
+    <span className={`font-semibold tracking-tight ${gradientText}`}>
+      Leaflyx
+    </span>
+  </Link>
+
+  {/* Desktop tagline */}
+  <span className="hidden md:inline text-sm font-semibold tracking-wide text-white/80 whitespace-nowrap">
+    Premium THCA goods
+  </span>
+</div>
+
+            {/* Center: Desktop nav + search */}
+            <div
+              className="flex-1 flex items-center justify-center min-w-0"
+              style={mdUp ? { gap: `${tuner.centerGap}px` } : { gap: 10 }}
+            >
+              <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
+                <ShopMenu
+                  active={isActive("/shop")}
+                  pillClass={shopPill}
+                  textClass={gradientText}
+                  activeGlowClass={activeGlow}
+                />
+                <NavLink href="/about" label="About" />
+                <NavLink href="/faq" label="FAQ" />
+                <NavLink href="/coa" label="COA" />
+              </nav>
+
+              {/* ✅ Search (desktop+) — Amazon-style dropdown */}
+              <div
+                className="relative hidden sm:block min-w-0"
+                role="search"
+                aria-label="Site search"
+                style={
+                  mdUp
+                    ? {
+                        width: `${tuner.searchWidth}px`,
+                        transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
+                      }
+                    : {
+                        width: "100%",
+                        maxWidth: 420,
+                      }
+                }
+              >
+                <HeaderSearch
+                  placeholder="Search products…"
+                  searchRouteBase="/search"
+                  productRouteBase="/shop" // ✅ canonical /shop/[slug]
+                />
               </div>
 
-              {/* Small search pill */}
+              {/* ✅ MOBILE: resting search (old compact look) */}
               {!mobileSearchOpen ? (
                 <button
-                  ref={mobileSearchTriggerRef}
                   type="button"
-                  onClick={() => {
-                    setMobileNavOpen(false);
-                    setMobileSearchOpen(true);
-                    setTimeout(() => focusExpandedSearch(), 0);
-                  }}
+                  onClick={openMobileSearch}
                   aria-label="Search"
-                  className={`md:hidden ${mobileSmallSearch}`}
-                >
-                  <div className={mobileSmallSearchInner}>
-                    <Search className="h-5 w-5 text-[rgba(10,35,26,0.85)]" />
-                    <span className="text-sm text-[rgba(10,25,18,0.55)]">Search</span>
-                  </div>
-                </button>
-              ) : (
-                <div className="md:hidden flex-1 min-w-0" />
-              )}
-
-              {/* Right cluster */}
-              <div className="ml-auto flex items-center" style={{ gap: `${tuner.rightGap}px` }}>
-                {process.env.NODE_ENV === "development" ? (
-                  <div className="relative hidden md:block">
-                    <button
-                      type="button"
-                      onClick={() => setTuneOpen((v) => !v)}
-                      aria-label="Tune header layout"
-                      className={`${pill} ${tuneOpen ? activeGlow : ""} !px-2`}
-                    >
-                      <SlidersHorizontal className="h-4 w-4 text-white/90" />
-                    </button>
-
-                    <HeaderTunerPanel
-                      open={tuneOpen}
-                      onClose={() => setTuneOpen(false)}
-                      tuner={tuner}
-                      onPatch={(p) => clampPatch(p)}
-                      onReset={() => reset()}
-                    />
-                  </div>
-                ) : null}
-
-                {/* Profile */}
-                <div
-                  ref={menuRef}
-                  className="relative"
-                  style={{ transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }}
-                >
-                  {authed ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setMenuOpen((v) => !v)}
-                        aria-label="Account menu"
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
-                        className={`${pill} ${
-                          menuOpen || isActive("/account") ? activeGlow : ""
-                        } relative shrink-0 !px-2`}
-                      >
-                        <span className="grid h-7 w-7 place-items-center rounded-full bg-black/35 ring-1 ring-[var(--brand-gold)] shadow-[0_0_12px_rgba(212,175,55,.35)]">
-                          <span className="text-[11px] font-semibold text-[var(--brand-gold)]">
-                            {init}
-                          </span>
-                        </span>
-                      </button>
-
-                      {menuOpen ? (
-                        <div
-                          role="menu"
-                          className="
-                            absolute right-0 mt-2 w-56
-                            rounded-2xl border border-white/10
-                            bg-black/80 backdrop-blur
-                            shadow-[0_20px_80px_rgba(0,0,0,0.55)]
-                            overflow-hidden
-                          "
-                        >
-                          <div className="px-3 py-2 border-b border-white/10">
-                            <div className="text-xs text-white/55">Signed in as</div>
-                            <div className="text-sm text-white/85 truncate">
-                              {session?.user?.email ?? "—"}
-                            </div>
-                          </div>
-
-                          <Link
-                            role="menuitem"
-                            href="/account"
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
-                          >
-                            <User className="h-4 w-4 text-[var(--brand-gold)]" />
-                            Account
-                          </Link>
-
-                          <Link
-                            role="menuitem"
-                            href="/account/orders"
-                            onClick={() => setMenuOpen(false)}
-                            className="flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10"
-                          >
-                            <Package className="h-4 w-4 text-[var(--brand-gold)]" />
-                            Orders
-                          </Link>
-
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={doSignOut}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-white/85 hover:bg-white/10 border-t border-white/10"
-                          >
-                            <LogOut className="h-4 w-4 text-[var(--brand-gold)]" />
-                            Sign out
-                          </button>
-                        </div>
-                      ) : null}
-                    </>
-                  ) : (
-                    <Link
-                      href="/sign-in"
-                      aria-label="Sign in"
-                      title="Sign in"
-                      className={`${pill} relative shrink-0 !px-2`}
-                    >
-                      <User className="h-5 w-5 text-white" aria-hidden="true" />
-                    </Link>
-                  )}
-                </div>
-
-                {/* Cart */}
-                <MiniCart>
-                  {({ open, toggle }: { open: boolean; toggle: () => void }) => {
-                    const onCartPage = pathname === "/cart";
-                    const glowClass =
-                      open || onCartPage ? activeGlow : count > 0 ? `${subtleGlow} pulse-gold` : "";
-
-                    return (
-                      <button
-                        onClick={toggle}
-                        aria-label="Cart"
-                        aria-haspopup="dialog"
-                        aria-expanded={open}
-                        className={`${pill} ${glowClass} relative shrink-0 !px-2`}
-                      >
-                        <ShoppingCart className="w-5 h-5 text-white transition" aria-hidden="true" />
-                        {count > 0 && (
-                          <span
-                            className="
-                              absolute -top-[7px] -right-[8px]
-                              min-w-[18px] h-5 px-1
-                              grid place-items-center rounded-full text-[10px] font-semibold
-                              bg-[var(--brand-green)] text-[var(--brand-gold)]
-                              ring-1 ring-[var(--brand-gold)]
-                              shadow-[0_0_10px_rgba(212,175,55,.45)]
-                              pointer-events-none
-                            "
-                          >
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  }}
-                </MiniCart>
-              </div>
-            </div>
-
-            {/* ✅ MOBILE: Expanded search row (NO Done button rendered anywhere) */}
-            {mobileSearchOpen ? (
-              <div ref={mobileSearchWrapRef} className="md:hidden" style={safePadStyle}>
-                <div
                   className="
-                    rounded-3xl border border-[#d4af37]
-                    bg-black/20 backdrop-blur
-                    shadow-[0_0_40px_rgba(212,175,55,0.28)]
-                    px-2 py-2
+                    sm:hidden
+                    flex-1 min-w-0
+                    rounded-2xl
+                    bg-black/25 hover:bg-black/35
+                    border border-white/10
+                    px-3 py-2
+                    text-left
                   "
                 >
-                  <div className="relative">
+                  <span className="text-white/60">Search</span>
+                </button>
+              ) : (
+                // keep spacing when expanded (so right icons don’t jump)
+                <div className="sm:hidden flex-1 min-w-0" />
+              )}
+            </div>
+
+            {/* Right cluster */}
+            <div
+              className="ml-auto flex items-center shrink-0"
+              style={mdUp ? { gap: `${tuner.rightGap}px` } : { gap: 8 }}
+            >
+              {process.env.NODE_ENV === "development" ? (
+                <div className="relative hidden md:block">
+                  <button
+                    type="button"
+                    onClick={() => setTuneOpen((v) => !v)}
+                    aria-label="Tune header layout"
+                    className={`${pill} ${tuneOpen ? activeGlow : ""} !px-2`}
+                  >
+                    <SlidersHorizontal className="h-4 w-4 text-white/90" />
+                  </button>
+
+                  <HeaderTunerPanel
+                    open={tuneOpen}
+                    onClose={() => setTuneOpen(false)}
+                    tuner={tuner}
+                    onPatch={(p) => clampPatch(p)}
+                    onReset={() => reset()}
+                  />
+                </div>
+              ) : null}
+
+              {/* ✅ Profile Dropdown */}
+              <div
+                ref={menuRef}
+                className="relative"
+                style={
+                  mdUp
+                    ? { transform: `translate(${tuner.profileX}px, ${tuner.profileY}px)` }
+                    : undefined
+                }
+              >
+                {authed ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMenuOpen((v) => !v)}
+                      aria-label="Account menu"
+                      aria-haspopup="menu"
+                      aria-expanded={menuOpen}
+                      className={`${pill} ${menuOpen || isActive("/account") ? activeGlow : ""} relative shrink-0 !px-2`}
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-black/35 ring-1 ring-[var(--brand-gold)] shadow-[0_0_12px_rgba(212,175,55,.35)]">
+                        <span className="text-[11px] font-semibold text-[var(--brand-gold)]">
+                          {init}
+                        </span>
+                      </span>
+                    </button>
+
+                    {menuOpen ? (
+                      <div
+                        role="menu"
+                        className="
+                          absolute right-0 mt-2 w-56
+                          rounded-2xl border border-white/10
+                          bg-black/80 backdrop-blur
+                          shadow-[0_20px_80px_rgba(0,0,0,0.55)]
+                          overflow-hidden
+                        "
+                      >
+                        <div className="px-3 py-2 border-b border-white/10">
+                          <div className="text-xs text-white/55">Signed in as</div>
+                          <div className="text-sm text-white/85 truncate">
+                            {session?.user?.email ?? "—"}
+                          </div>
+                        </div>
+
+                        <Link
+                          role="menuitem"
+                          href="/account"
+                          onClick={() => setMenuOpen(false)}
+                          className="
+                            flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                          "
+                        >
+                          <User className="h-4 w-4 text-[var(--brand-gold)]" />
+                          Account
+                        </Link>
+
+                        <Link
+                          role="menuitem"
+                          href="/account/orders"
+                          onClick={() => setMenuOpen(false)}
+                          className="
+                            flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                          "
+                        >
+                          <Package className="h-4 w-4 text-[var(--brand-gold)]" />
+                          Orders
+                        </Link>
+
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={doSignOut}
+                          className="
+                            w-full flex items-center gap-2 px-3 py-2
+                            text-sm text-white/85 hover:bg-white/10
+                            border-t border-white/10
+                          "
+                        >
+                          <LogOut className="h-4 w-4 text-[var(--brand-gold)]" />
+                          Sign out
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <Link
+                    href="/sign-in"
+                    aria-label="Sign in"
+                    title="Sign in"
+                    className={`${pill} relative shrink-0 !px-2`}
+                  >
+                    <User className="h-5 w-5 text-white" aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+
+              {/* Cart */}
+              <MiniCart>
+                {({ open, toggle }: { open: boolean; toggle: () => void }) => {
+                  const onCartPage = pathname === "/cart";
+                  const glowClass =
+                    open || onCartPage ? activeGlow : count > 0 ? `${subtleGlow} pulse-gold` : "";
+
+                  return (
+                    <button
+                      onClick={toggle}
+                      aria-label="Cart"
+                      aria-haspopup="dialog"
+                      aria-expanded={open}
+                      className={`${pill} ${glowClass} relative shrink-0 !px-2`}
+                    >
+                      <ShoppingCart className="w-5 h-5 text-white transition" aria-hidden="true" />
+                      {count > 0 && (
+                        <span
+                          className="
+                            absolute -top-[7px] -right-[8px]
+                            min-w-[18px] h-5 px-1
+                            grid place-items-center rounded-full text-[10px] font-semibold
+                            bg-[var(--brand-green)] text-[var(--brand-gold)]
+                            ring-1 ring-[var(--brand-gold)]
+                            shadow-[0_0_10px_rgba(212,175,55,.45)]
+                            pointer-events-none
+                          "
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                }}
+              </MiniCart>
+            </div>
+          </div>
+
+          {/* ✅ MOBILE: expanded search row (single search bar; hides top one) */}
+          {mobileSearchOpen ? (
+            <div className="relative z-20 sm:hidden">
+              {/* subtle “peek” divider under the row */}
+              <div
+                aria-hidden="true"
+                className="h-[2px] w-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.25)",
+                }}
+              />
+
+              <div
+                className="
+                  max-w-6xl mx-auto
+                  pt-2 pb-3
+                  pl-[max(0.75rem,env(safe-area-inset-left))]
+                  pr-[max(0.75rem,env(safe-area-inset-right))]
+                "
+              >
+                <div className="flex items-center gap-2">
+                  <div ref={expandedSearchWrapRef} className="relative flex-1 min-w-0">
+                    {/* Keep the “old loupe style” look by using HeaderSearch itself */}
                     <HeaderSearch
                       placeholder="Search"
                       searchRouteBase="/search"
@@ -558,129 +632,92 @@ export function Header() {
                     />
                   </div>
 
-                  <div
-                    aria-hidden="true"
-                    className="mt-2 h-[2px] w-full rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                      opacity: 0.9,
-                    }}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            {/* Desktop center */}
-            <div className="hidden md:flex items-center gap-3 px-3">
-              <div className="flex-1 flex items-center justify-center" style={{ gap: `${tuner.centerGap}px` }}>
-                <nav className="hidden md:flex items-center gap-4" aria-label="Primary">
-                  <ShopMenu
-                    active={isActive("/shop")}
-                    pillClass={shopPill}
-                    textClass={gradientText}
-                    activeGlowClass={activeGlow}
-                  />
-                  <NavLink href="/about" label="About" />
-                  <NavLink href="/faq" label="FAQ" />
-                  <NavLink href="/coa" label="COA" />
-                </nav>
-
-                <div
-                  className="relative hidden sm:block"
-                  role="search"
-                  aria-label="Site search"
-                  style={{
-                    width: `${tuner.searchWidth}px`,
-                    transform: `translate(${tuner.searchX}px, ${tuner.searchY}px)`,
-                  }}
-                >
-                  <HeaderSearch
-                    placeholder="Search products…"
-                    searchRouteBase="/search"
-                    productRouteBase="/shop"
-                  />
+                  <button
+                    type="button"
+                    onClick={closeMobileSearch}
+                    className={`${pill} shrink-0`}
+                    aria-label="Done searching"
+                  >
+                    <span className={gradientText}>Done</span>
+                  </button>
                 </div>
               </div>
             </div>
+          ) : null}
 
-            {/* Mobile nav panel */}
-            {mobileNavOpen ? (
-              <div className="md:hidden px-2" style={safePadStyle}>
+          {/* ✅ MOBILE: menu panel */}
+          {mobileOpen ? (
+            <div className="relative z-20 md:hidden">
+              {/* subtle “peek” divider under the mobile panel */}
+              <div
+                aria-hidden="true"
+                className="h-[2px] w-full"
+                style={{
+                  background:
+                    "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.8), rgba(212,175,55,0.0))",
+                  boxShadow: "0 0 18px rgba(212,175,55,0.22)",
+                }}
+              />
+
+              <div
+                className="
+                  max-w-6xl mx-auto
+                  pl-[max(0.75rem,env(safe-area-inset-left))]
+                  pr-[max(0.75rem,env(safe-area-inset-right))]
+                  pb-3
+                "
+              >
                 <div
                   className="
-                    rounded-3xl border border-[#d4af37]
-                    bg-black/25 backdrop-blur
-                    shadow-[0_0_40px_rgba(212,175,55,0.22)]
-                    p-3
+                    mt-2 rounded-3xl
+                    border border-[rgba(212,175,55,0.6)]
+                    bg-black/35 backdrop-blur
+                    shadow-[0_18px_70px_rgba(0,0,0,0.55)]
+                    overflow-hidden
                   "
                 >
-                  <div className="flex flex-wrap gap-2">
-                    <Link
-                      href="/products"
-                      className={`${pill} ${isActive("/shop") ? activeGlow : ""}`}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
+                  <div className="px-3 py-2 text-xs text-white/60 border-b border-white/10">
+                    Tip: search works great on mobile — products open in the same premium{" "}
+                    <span className="text-white/80">/shop</span> view.
+                  </div>
+
+                  <div className="p-3 flex flex-wrap gap-2">
+                    <Link href="/products" className={pill}>
                       <span className={gradientText}>Shop</span>
                     </Link>
-                    <Link
-                      href="/about"
-                      className={`${pill} ${isActive("/about") ? activeGlow : ""}`}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
+                    <Link href="/about" className={pill}>
                       <span className={gradientText}>About</span>
                     </Link>
-                    <Link
-                      href="/faq"
-                      className={`${pill} ${isActive("/faq") ? activeGlow : ""}`}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
+                    <Link href="/faq" className={pill}>
                       <span className={gradientText}>FAQ</span>
                     </Link>
-                    <Link
-                      href="/coa"
-                      className={`${pill} ${isActive("/coa") ? activeGlow : ""}`}
-                      onClick={() => setMobileNavOpen(false)}
-                    >
+                    <Link href="/coa" className={pill}>
                       <span className={gradientText}>COA</span>
                     </Link>
 
+                    <button
+                      type="button"
+                      onClick={openMobileSearch}
+                      className={pill}
+                      aria-label="Open search"
+                    >
+                      <span className={gradientText}>Search</span>
+                    </button>
+
                     {!authed ? (
-                      <Link
-                        href="/sign-in"
-                        className={pill}
-                        onClick={() => setMobileNavOpen(false)}
-                      >
+                      <Link href="/sign-in" className={pill}>
                         <span className={gradientText}>Sign in</span>
                       </Link>
                     ) : (
-                      <Link
-                        href="/account"
-                        className={pill}
-                        onClick={() => setMobileNavOpen(false)}
-                      >
+                      <Link href="/account" className={pill}>
                         <span className={gradientText}>Account</span>
                       </Link>
                     )}
                   </div>
-
-                  <div className="mt-3 text-xs text-white/60">
-                    Tip: tap <span className="text-[var(--brand-gold)]">Search</span> to open the full dropdown + keyboard.
-                  </div>
-
-                  <div
-                    aria-hidden="true"
-                    className="mt-3 h-[2px] w-full rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, rgba(212,175,55,0.0), rgba(212,175,55,0.75), rgba(212,175,55,0.0))",
-                      opacity: 0.9,
-                    }}
-                  />
                 </div>
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
 
         <AnnouncementBar />
