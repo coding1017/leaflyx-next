@@ -1,21 +1,39 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type Orb = {
+type OrbDef = {
   id: string;
   label: string;
   href: string;
-  x: number; // %
-  y: number; // %
-  baseSize: number; // px (design size)
+  d: number; // base diameter in px (scaled responsively)
   gradient: "goldToEmerald" | "emeraldToGold";
-  drift: { dx: number; dy: number; dur: number; delay: number };
+  xPct: number;
+  yPct: number;
 };
 
-function haloForGradient(g: Orb["gradient"]) {
+type SimOrb = {
+  id: string;
+  href: string;
+  r: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  tvx: number;
+  tvy: number;
+  nextWanderAt: number;
+  seedA: number;
+  seedB: number;
+};
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function haloForGradient(g: OrbDef["gradient"]) {
   return g === "goldToEmerald"
     ? {
         tube: "rgba(209,255,235,0.20)",
@@ -26,21 +44,17 @@ function haloForGradient(g: Orb["gradient"]) {
       }
     : {
         tube: "rgba(255,255,255,0.20)",
-        core: "rgba(255,244,200,0.90)",
-        mid: "rgba(245,215,122,0.92)",
-        wide: "rgba(212,175,55,0.34)",
-        shadow: "rgba(245,215,122,0.86)",
+        core: "rgba(255,244,200,0.92)",
+        mid: "rgba(245,215,122,0.96)",
+        wide: "rgba(212,175,55,0.38)",
+        shadow: "rgba(245,215,122,0.92)",
       };
 }
 
-function gradientClass(g: Orb["gradient"]) {
+function gradientClass(g: OrbDef["gradient"]) {
   return g === "goldToEmerald"
     ? "bg-gradient-to-r from-[var(--brand-gold)] via-[#F5D77A] to-emerald-300"
     : "bg-gradient-to-r from-emerald-300 via-[#F5D77A] to-[var(--brand-gold)]";
-}
-
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
 }
 
 export default function ConstellationHero() {
@@ -48,16 +62,93 @@ export default function ConstellationHero() {
 
   const wrapRef = useRef<HTMLElement | null>(null);
   const plateRef = useRef<HTMLDivElement | null>(null);
+  const orbNodesRef = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const spotRafRef = useRef<number | null>(null);
+  // spotlight (mouse only)
+  const rafSpotRef = useRef<number | null>(null);
   const lastXY = useRef({ x: 50, y: 45 });
 
-  const orbAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // physics
+  const rafSimRef = useRef<number | null>(null);
+  const simRef = useRef<{
+    ready: boolean;
+    w: number;
+    h: number;
+    pad: number;
+    wallPad: number;
+    orbs: SimOrb[];
+    lastT: number;
+    // speed tuning
+    speedMult: number;
+  }>({
+    ready: false,
+    w: 0,
+    h: 0,
+    pad: 12,
+    wallPad: 22,
+    orbs: [],
+    lastT: 0,
+    speedMult: 1.0,
+  });
 
-  // ✅ plate size -> used to scale orb size + drift
-  const [plateSize, setPlateSize] = useState({ w: 0, h: 0 });
+  const orbDefs: OrbDef[] = useMemo(() => {
+  const cats: Omit<OrbDef, "xPct" | "yPct">[] = [
+    // Shop base matches concentrates base
+    { id: "shop", label: "Shop", href: "/products", d: 156, gradient: "goldToEmerald" },
 
-  // Mouse-only spotlight (no React state churn)
+    { id: "flower", label: "Flower", href: "/category/flower", d: 142, gradient: "emeraldToGold" },
+    { id: "smalls", label: "Smalls", href: "/category/smalls", d: 120, gradient: "goldToEmerald" },
+    { id: "vapes", label: "Vapes", href: "/category/vapes", d: 124, gradient: "emeraldToGold" },
+    { id: "edibles", label: "Edibles", href: "/category/edibles", d: 140, gradient: "goldToEmerald" },
+
+    // Beverages stays untouched
+    { id: "beverages", label: "Beverages", href: "/category/beverages", d: 122, gradient: "emeraldToGold" },
+
+    { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", d: 138, gradient: "goldToEmerald" },
+    { id: "conc", label: "Concentrates", href: "/category/concentrates", d: 156, gradient: "emeraldToGold" },
+  ];
+
+  const layout = [
+    { xPct: 40, yPct: 54 }, // shop
+    { xPct: 28, yPct: 28 }, // flower
+    { xPct: 50, yPct: 24 }, // smalls
+    { xPct: 76, yPct: 30 }, // vapes
+    { xPct: 64, yPct: 56 }, // edibles
+    { xPct: 32, yPct: 78 }, // beverages
+    { xPct: 74, yPct: 76 }, // pre
+    { xPct: 52, yPct: 80 }, // concentrates
+  ];
+
+  const shrink = 0.92; // 8% reduction (middle ground)
+
+  return cats.map((c, i) => {
+    let newSize = c.d;
+
+    // Shrink everyone except beverages
+    if (c.id !== "beverages") {
+      newSize = Math.round(c.d * shrink);
+    }
+
+    // Concentrates slight boost for label fit
+    if (c.id === "conc") {
+      newSize = Math.round(newSize * 1.05);
+    }
+
+    // Shop slightly more dominant (3–4% larger than concentrates)
+    if (c.id === "shop") {
+      newSize = Math.round(newSize * 1.09);
+    }
+
+    return {
+      ...c,
+      d: newSize,
+      xPct: layout[i]?.xPct ?? 50,
+      yPct: layout[i]?.yPct ?? 50,
+    };
+  });
+}, []);
+
+  // ✅ Mouse spotlight: ignores touch scrolling
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -71,9 +162,9 @@ export default function ConstellationHero() {
 
       lastXY.current = { x: clamp(px, 0, 100), y: clamp(py, 0, 100) };
 
-      if (spotRafRef.current) return;
-      spotRafRef.current = window.requestAnimationFrame(() => {
-        spotRafRef.current = null;
+      if (rafSpotRef.current) return;
+      rafSpotRef.current = window.requestAnimationFrame(() => {
+        rafSpotRef.current = null;
         el.style.setProperty("--mx", `${lastXY.current.x}%`);
         el.style.setProperty("--my", `${lastXY.current.y}%`);
       });
@@ -86,236 +177,255 @@ export default function ConstellationHero() {
 
     el.addEventListener("pointermove", onMove, { passive: true });
     el.addEventListener("pointerleave", onLeave, { passive: true });
+
     el.style.setProperty("--mx", `50%`);
     el.style.setProperty("--my", `45%`);
 
     return () => {
       el.removeEventListener("pointermove", onMove as any);
       el.removeEventListener("pointerleave", onLeave as any);
-      if (spotRafRef.current) cancelAnimationFrame(spotRafRef.current);
-      spotRafRef.current = null;
+      if (rafSpotRef.current) cancelAnimationFrame(rafSpotRef.current);
+      rafSpotRef.current = null;
     };
   }, []);
 
-  // ✅ Observe plate size (responsive sizing)
-  useEffect(() => {
-    const plate = plateRef.current;
-    if (!plate) return;
+  function paint(orbs: SimOrb[]) {
+    for (const o of orbs) {
+      const node = orbNodesRef.current[o.id];
+      if (!node) continue;
+      const tx = o.x - o.r;
+      const ty = o.y - o.r;
+      node.style.transform = `translate3d(${tx.toFixed(2)}px, ${ty.toFixed(2)}px, 0px)`;
+      node.style.width = `${(o.r * 2).toFixed(0)}px`;
+      node.style.height = `${(o.r * 2).toFixed(0)}px`;
+    }
+  }
 
-    const ro = new ResizeObserver((entries) => {
-      const r = entries[0]?.contentRect;
-      if (!r) return;
-      setPlateSize({ w: r.width, h: r.height });
-    });
-    ro.observe(plate);
+  function resolveCollisions(orbs: SimOrb[], pad: number, applyImpulse = false) {
+    for (let i = 0; i < orbs.length; i++) {
+      for (let j = i + 1; j < orbs.length; j++) {
+        const a = orbs[i];
+        const b = orbs[j];
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dist = Math.hypot(dx, dy) || 0.0001;
 
-    // init fallback
-    const br = plate.getBoundingClientRect();
-    setPlateSize({ w: br.width, h: br.height });
+        const minDist = a.r + b.r + pad;
+        if (dist >= minDist) continue;
 
-    return () => ro.disconnect();
-  }, []);
+        const nx = dx / dist;
+        const ny = dy / dist;
 
-  // ✅ Scale rules:
-  // - scale based on plate min dimension
-  // - also scale drift down on smaller plates so motion doesn’t cause collisions
-  const scale = useMemo(() => {
-    const m = Math.min(plateSize.w || 0, plateSize.h || 0);
-    if (!m) return 1;
-    // 520-ish is your desktop "comfortable" plate size
-    return clamp(m / 520, 0.72, 1.0);
-  }, [plateSize.w, plateSize.h]);
+        const overlap = minDist - dist;
+        const push = overlap * 0.5;
+        a.x -= nx * push;
+        a.y -= ny * push;
+        b.x += nx * push;
+        b.y += ny * push;
 
-  const driftScale = useMemo(() => {
-    const m = Math.min(plateSize.w || 0, plateSize.h || 0);
-    if (!m) return 1;
-    // shrink drift more aggressively on small plates
-    return clamp(m / 560, 0.42, 1.0);
-  }, [plateSize.w, plateSize.h]);
-
-  const orbs: Orb[] = useMemo(() => {
-    const cats = [
-      { id: "shop", label: "Shop", href: "/products", baseSize: 150 },
-      { id: "flower", label: "Flower", href: "/category/flower", baseSize: 118 },
-      { id: "smalls", label: "Smalls", href: "/category/smalls", baseSize: 105 },
-      { id: "vapes", label: "Vapes", href: "/category/vapes", baseSize: 110 },
-      { id: "edibles", label: "Edibles", href: "/category/edibles", baseSize: 115 },
-      { id: "beverages", label: "Beverages", href: "/category/beverages", baseSize: 102 },
-      { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", baseSize: 115 },
-      { id: "conc", label: "Concentrates", href: "/category/concentrates", baseSize: 118 },
-    ];
-
-    // Base layout (beverages already in the open pocket)
-    const layout = [
-      { x: 26, y: 56 },
-      { x: 18, y: 28 },
-      { x: 50, y: 24 },
-      { x: 82, y: 30 },
-      { x: 64, y: 54 },
-      { x: 30, y: 86 },
-      { x: 78, y: 74 },
-      { x: 56, y: 78 },
-    ];
-
-    // Base drift (gets multiplied by driftScale)
-    const driftTable = [
-      { dx: 34, dy: -28, dur: 11.2 },
-      { dx: -30, dy: 24, dur: 12.6 },
-      { dx: 26, dy: 34, dur: 13.1 },
-      { dx: -34, dy: -24, dur: 12.2 },
-      { dx: 30, dy: -34, dur: 14.1 },
-      { dx: -26, dy: 28, dur: 11.8 },
-      { dx: 38, dy: 18, dur: 15.0 },
-      { dx: -38, dy: -18, dur: 14.4 },
-    ];
-
-    return cats.map((c, i) => {
-      const gradient = i % 2 === 0 ? "goldToEmerald" : "emeraldToGold";
-      const d = driftTable[i % driftTable.length];
-
-      return {
-        id: c.id,
-        label: c.label,
-        href: c.href,
-        baseSize: c.baseSize,
-        x: layout[i]?.x ?? 50,
-        y: layout[i]?.y ?? 50,
-        gradient,
-        drift: {
-          dx: d.dx * driftScale,
-          dy: d.dy * driftScale,
-          dur: d.dur,
-          delay: -(i * 0.65),
-        },
-      };
-    });
-  }, [driftScale]);
-
-  // ✅ Non-overlap relaxation that accounts for drift range (so they don’t collide while moving)
-  useEffect(() => {
-    const plate = plateRef.current;
-    if (!plate) return;
-
-    let raf: number | null = null;
-
-    const relaxLayout = () => {
-      const pr = plate.getBoundingClientRect();
-      const w = pr.width;
-      const h = pr.height;
-      if (!w || !h) return;
-
-      const pad = 14;
-
-      const nodes = orbs
-        .map((o) => {
-          const el = orbAnchorRefs.current[o.id];
-          if (!el) return null;
-
-          const size = Math.round(o.baseSize * scale);
-          const r = size / 2;
-
-          // ✅ Effective radius includes wander range so animations don’t overlap
-          const wander = Math.max(Math.abs(o.drift.dx), Math.abs(o.drift.dy));
-          const effR = r + wander * 0.62 + 10;
-
-          return {
-            id: o.id,
-            size,
-            r,
-            effR,
-            x: (o.x / 100) * w,
-            y: (o.y / 100) * h,
-            el,
-          };
-        })
-        .filter(Boolean) as Array<{
-        id: string;
-        size: number;
-        r: number;
-        effR: number;
-        x: number;
-        y: number;
-        el: HTMLDivElement;
-      }>;
-
-      if (!nodes.length) return;
-
-      const clampXY = (n: typeof nodes[number]) => {
-        n.x = clamp(n.x, n.effR + pad, w - n.effR - pad);
-        n.y = clamp(n.y, n.effR + pad, h - n.effR - pad);
-      };
-
-      // Desired separation gap (scales slightly with plate)
-      const baseGap = 10;
-      const gap = baseGap + (1 - scale) * 14; // more gap when smaller screen
-      const iters = 48;
-
-      // initial clamp
-      nodes.forEach(clampXY);
-
-      for (let k = 0; k < iters; k++) {
-        let moved = false;
-
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i];
-            const b = nodes[j];
-
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const dist = Math.hypot(dx, dy) || 0.0001;
-
-            // ✅ Use effective radii (includes wander)
-            const minDist = a.effR + b.effR + gap;
-
-            if (dist < minDist) {
-              const nx = dx / dist;
-              const ny = dy / dist;
-              const push = (minDist - dist) * 0.55;
-
-              a.x -= nx * push;
-              a.y -= ny * push;
-              b.x += nx * push;
-              b.y += ny * push;
-
-              moved = true;
-
-              clampXY(a);
-              clampXY(b);
-            }
+        if (applyImpulse) {
+          const rvx = b.vx - a.vx;
+          const rvy = b.vy - a.vy;
+          const velAlongNormal = rvx * nx + rvy * ny;
+          if (velAlongNormal < 0) {
+            const restitution = 0.92;
+            const jImpulse = -(1 + restitution) * velAlongNormal * 0.5;
+            const ix = jImpulse * nx;
+            const iy = jImpulse * ny;
+            a.vx -= ix;
+            a.vy -= iy;
+            b.vx += ix;
+            b.vy += iy;
           }
         }
+      }
+    }
+  }
 
-        if (!moved) break;
+  function contain(orbs: SimOrb[], w: number, h: number, wallPad: number, bounce = false) {
+    for (const o of orbs) {
+      const left = wallPad + o.r;
+      const right = w - wallPad - o.r;
+      const top = wallPad + o.r;
+      const bottom = h - wallPad - o.r;
+
+      if (o.x < left) {
+        o.x = left;
+        if (bounce) o.vx = Math.abs(o.vx) * 0.95;
+      } else if (o.x > right) {
+        o.x = right;
+        if (bounce) o.vx = -Math.abs(o.vx) * 0.95;
       }
 
-      // Apply layout + per-orb size as inline styles (no re-render required)
-      for (const n of nodes) {
-        const px = (n.x / w) * 100;
-        const py = (n.y / h) * 100;
-
-        n.el.style.left = `${px}%`;
-        n.el.style.top = `${py}%`;
-        n.el.style.width = `${n.size}px`;
-        n.el.style.height = `${n.size}px`;
+      if (o.y < top) {
+        o.y = top;
+        if (bounce) o.vy = Math.abs(o.vy) * 0.95;
+      } else if (o.y > bottom) {
+        o.y = bottom;
+        if (bounce) o.vy = -Math.abs(o.vy) * 0.95;
       }
+    }
+  }
+
+  // ✅ build / rebuild sim on plate resize
+  useEffect(() => {
+    const plate = plateRef.current;
+    if (!plate) return;
+
+    const rebuild = () => {
+      const r = plate.getBoundingClientRect();
+      const w = Math.max(1, r.width);
+      const h = Math.max(1, r.height);
+
+      const minSide = Math.min(w, h);
+
+      // baseline scaling
+      let scale = minSide / 520;
+      if (minSide >= 520) scale *= 1.05;
+      if (minSide <= 380) scale *= 1.14;
+      scale = clamp(scale, 0.80, 1.22);
+
+      // ✅ slightly more free space between orbs
+      const pad = clamp(minSide * 0.022, 12, 18);
+
+      // ✅ wall padding
+      const wallPad = clamp(minSide * 0.065, 20, 34);
+
+      // ✅ speed multiplier: quicker overall drift
+      // (keeps it smooth; just faster)
+      const speedMult = minSide <= 400 ? 1.18 : 1.28;
+
+      const now = performance.now();
+
+      const simOrbs: SimOrb[] = orbDefs.map((d, i) => {
+        const dScaled = clamp(d.d * scale, 98, 190);
+        const r0 = dScaled / 2;
+
+        const x0 = wallPad + (d.xPct / 100) * (w - wallPad * 2);
+        const y0 = wallPad + (d.yPct / 100) * (h - wallPad * 2);
+
+        // ✅ faster base speed (px/s)
+        const base = clamp(minSide * 0.020, 11, 18) * speedMult;
+        const angle = (i / orbDefs.length) * Math.PI * 2 + (i % 2 ? 0.6 : -0.35);
+        const vx = Math.cos(angle) * base;
+        const vy = Math.sin(angle) * base;
+
+        const seedA = (i + 1) * 123.456;
+        const seedB = (i + 1) * 78.91;
+
+        return {
+          id: d.id,
+          href: d.href,
+          r: r0,
+          x: x0,
+          y: y0,
+          vx,
+          vy,
+          tvx: vx,
+          tvy: vy,
+          nextWanderAt: now + 520 + i * 95, // ✅ changes sooner
+          seedA,
+          seedB,
+        };
+      });
+
+      simRef.current = {
+        ready: true,
+        w,
+        h,
+        pad,
+        wallPad,
+        orbs: simOrbs,
+        lastT: performance.now(),
+        speedMult,
+      };
+
+      // relax so they start non-overlapping
+      for (let k = 0; k < 40; k++) {
+        resolveCollisions(simRef.current.orbs, simRef.current.pad);
+        contain(simRef.current.orbs, w, h, wallPad);
+      }
+
+      paint(simRef.current.orbs);
     };
 
-    raf = window.requestAnimationFrame(relaxLayout);
+    const ro = new ResizeObserver(() => rebuild());
+    ro.observe(plate);
+    rebuild();
 
-    const onResize = () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = window.requestAnimationFrame(relaxLayout);
+    return () => ro.disconnect();
+  }, [orbDefs]);
+
+  // ✅ simulation loop
+  useEffect(() => {
+    const step = (t: number) => {
+      const sim = simRef.current;
+      if (!sim.ready) {
+        rafSimRef.current = requestAnimationFrame(step);
+        return;
+      }
+
+      const dtMs = t - sim.lastT;
+      sim.lastT = t;
+      const dt = clamp(dtMs / 1000, 0.008, 0.030);
+
+      const { w, h, wallPad, pad, speedMult } = sim;
+
+      // ✅ quicker, more alive movement
+      const maxSpeed = clamp(Math.min(w, h) * 0.12, 72, 118) * speedMult;
+      const wanderLerp = 0.06; // faster “direction chasing”
+      const friction = 0.995;
+
+      // ✅ jitter bigger so it's less patterned, still smooth
+      const jitterAmp = clamp(Math.min(w, h) * 0.0042, 1.2, 2.6) * speedMult;
+
+      for (const o of sim.orbs) {
+        if (t >= o.nextWanderAt) {
+          const mag = clamp(Math.min(w, h) * 0.052, 26, 48) * speedMult;
+          const ang = Math.random() * Math.PI * 2;
+          o.tvx = Math.cos(ang) * mag;
+          o.tvy = Math.sin(ang) * mag;
+
+          // ✅ change targets more often
+          o.nextWanderAt = t + 520 + Math.random() * 780;
+        }
+
+        const jx = Math.sin((t / 1000) * (0.95 + (o.seedA % 0.6)) + o.seedA) * jitterAmp;
+        const jy = Math.cos((t / 1000) * (1.15 + (o.seedB % 0.7)) + o.seedB) * jitterAmp;
+
+        o.tvx += jx * dt;
+        o.tvy += jy * dt;
+
+        o.vx += (o.tvx - o.vx) * wanderLerp;
+        o.vy += (o.tvy - o.vy) * wanderLerp;
+
+        const sp = Math.hypot(o.vx, o.vy);
+        if (sp > maxSpeed) {
+          const s = maxSpeed / sp;
+          o.vx *= s;
+          o.vy *= s;
+        }
+
+        o.x += o.vx * dt;
+        o.y += o.vy * dt;
+
+        o.vx *= friction;
+        o.vy *= friction;
+      }
+
+      resolveCollisions(sim.orbs, pad, true);
+      contain(sim.orbs, w, h, wallPad, true);
+      paint(sim.orbs);
+
+      rafSimRef.current = requestAnimationFrame(step);
     };
 
-    window.addEventListener("resize", onResize, { passive: true });
-
+    rafSimRef.current = requestAnimationFrame(step);
     return () => {
-      window.removeEventListener("resize", onResize as any);
-      if (raf) cancelAnimationFrame(raf);
-      raf = null;
+      if (rafSimRef.current) cancelAnimationFrame(rafSimRef.current);
+      rafSimRef.current = null;
     };
-  }, [orbs, scale]);
+  }, []);
 
   return (
     <section
@@ -335,35 +445,6 @@ export default function ConstellationHero() {
         } as React.CSSProperties
       }
     >
-      <style>{`
-        @keyframes orbWanderA {
-          0%   { transform: translate3d(0px, 0px, 0px); }
-          13%  { transform: translate3d(calc(var(--dx) * 0.55), calc(var(--dy) * -0.35), 0px); }
-          27%  { transform: translate3d(calc(var(--dx) * -0.25), calc(var(--dy) * 0.75), 0px); }
-          41%  { transform: translate3d(calc(var(--dx) * 0.92), calc(var(--dy) * 0.18), 0px); }
-          58%  { transform: translate3d(calc(var(--dx) * -0.78), calc(var(--dy) * -0.40), 0px); }
-          72%  { transform: translate3d(calc(var(--dx) * 0.30), calc(var(--dy) * 0.92), 0px); }
-          86%  { transform: translate3d(calc(var(--dx) * -0.95), calc(var(--dy) * 0.10), 0px); }
-          100% { transform: translate3d(0px, 0px, 0px); }
-        }
-        @keyframes orbWanderB {
-          0%   { transform: translate3d(0px, 0px, 0px); }
-          16%  { transform: translate3d(calc(var(--dx) * -0.62), calc(var(--dy) * 0.30), 0px); }
-          33%  { transform: translate3d(calc(var(--dx) * 0.22), calc(var(--dy) * 0.88), 0px); }
-          49%  { transform: translate3d(calc(var(--dx) * 0.86), calc(var(--dy) * -0.22), 0px); }
-          65%  { transform: translate3d(calc(var(--dx) * -0.18), calc(var(--dy) * -0.92), 0px); }
-          82%  { transform: translate3d(calc(var(--dx) * 0.94), calc(var(--dy) * 0.40), 0px); }
-          100% { transform: translate3d(0px, 0px, 0px); }
-        }
-        @keyframes orbMicro {
-          0%   { transform: translate3d(0px, 0px, 0px) rotate(0.001deg); }
-          25%  { transform: translate3d(6px, -5px, 0px) rotate(0.001deg); }
-          50%  { transform: translate3d(-4px, 7px, 0px) rotate(0.001deg); }
-          75%  { transform: translate3d(5px, 4px, 0px) rotate(0.001deg); }
-          100% { transform: translate3d(0px, 0px, 0px) rotate(0.001deg); }
-        }
-      `}</style>
-
       {/* Background */}
       <div
         className="absolute inset-0"
@@ -417,19 +498,19 @@ export default function ConstellationHero() {
               Everything is backed by third-party COAs and clear potency labeling.
             </p>
 
+            {/* ✅ Smaller Shop CTA for space */}
             <div className="mt-7 flex flex-col gap-3">
               <button
                 onClick={() => router.push("/products")}
                 className="
                   inline-flex items-center justify-center
-                  rounded-full px-5 py-2.5
-                  font-extrabold text-black
-                  bg-[var(--brand-gold)]
+                  rounded-full px-4 py-2
+                  font-extrabold text-[14px] sm:text-[15px]
+                  text-black bg-[var(--brand-gold)]
                   border border-black/70
-                  shadow-[0_18px_44px_rgba(212,175,55,0.45)]
+                  shadow-[0_16px_38px_rgba(212,175,55,0.42)]
                   hover:brightness-105 active:brightness-95
-                  transition
-                  w-fit
+                  transition w-fit
                 "
                 style={{ touchAction: "manipulation" }}
               >
@@ -445,8 +526,7 @@ export default function ConstellationHero() {
                   bg-black/85
                   shadow-[0_0_0_1px_rgba(0,0,0,0.65),_0_14px_34px_rgba(0,0,0,0.45),_0_0_34px_rgba(212,175,55,0.26)]
                   hover:brightness-110 active:brightness-95
-                  transition
-                  w-fit
+                  transition w-fit
                 "
                 style={{ touchAction: "manipulation" }}
               >
@@ -457,7 +537,7 @@ export default function ConstellationHero() {
             </div>
           </div>
 
-          {/* Right constellation */}
+          {/* Right */}
           <div className="relative min-h-[380px] sm:min-h-[440px] lg:min-h-[500px]">
             <div
               ref={plateRef}
@@ -467,130 +547,103 @@ export default function ConstellationHero() {
                 bg-black/25
                 sm:bg-black/20 sm:backdrop-blur-[10px]
                 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.75)]
+                overflow-hidden
               "
-            />
+            >
+              {orbDefs.map((o) => {
+                const isShop = o.id === "shop";
+                const halo = haloForGradient(o.gradient);
 
-            {orbs.map((o, idx) => {
-              const isShop = o.id === "shop";
-              const halo = haloForGradient(o.gradient);
+                const ringGold =
+                  "inset 0 0 0 1px rgba(212,175,55,0.60), inset 0 0 26px rgba(212,175,55,0.16)";
+                const ringDark = "inset 0 0 0 2px rgba(0,0,0,0.78)";
 
-              const ringGold =
-                "inset 0 0 0 1px rgba(212,175,55,0.60), inset 0 0 26px rgba(212,175,55,0.16)";
-              const ringDark = "inset 0 0 0 2px rgba(0,0,0,0.78)";
-              const wanderName = idx % 2 === 0 ? "orbWanderA" : "orbWanderB";
+                // ✅ slightly smaller font for “Concentrates” only, so it always fits
+                const labelClass =
+                  o.id === "conc"
+                    ? (isShop ? "text-[18px] sm:text-[20px]" : "text-[13px] sm:text-[14px]")
+                    : isShop
+                      ? "text-[18px] sm:text-[20px]"
+                      : "text-[14px] sm:text-[15px]";
 
-              // initial size (will be overridden by relaxLayout inline sizing)
-              const size = Math.round(o.baseSize * scale);
-
-              return (
-                <div
-                  key={o.id}
-                  ref={(node) => {
-                    orbAnchorRefs.current[o.id] = node;
-                  }}
-                  className="absolute"
-                  style={{
-                    left: `${o.x}%`,
-                    top: `${o.y}%`,
-                    width: size,
-                    height: size,
-                    transform: "translate(-50%, -50%)",
-                  }}
-                >
+                return (
                   <div
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      ["--dx" as any]: `${o.drift.dx}px`,
-                      ["--dy" as any]: `${o.drift.dy}px`,
-                      animationName: wanderName,
-                      animationDuration: `${o.drift.dur}s`,
-                      animationTimingFunction: "linear",
-                      animationIterationCount: "infinite",
-                      animationDelay: `${o.drift.delay}s`,
-                      willChange: "transform",
+                    key={o.id}
+                    ref={(node) => {
+                      orbNodesRef.current[o.id] = node;
                     }}
+                    className="absolute left-0 top-0 will-change-transform"
                   >
                     <div
+                      aria-hidden="true"
+                      className="absolute -inset-6 rounded-full pointer-events-none opacity-95"
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        animationName: "orbMicro",
-                        animationDuration: `${6.5 + (idx % 4) * 0.9}s`,
-                        animationTimingFunction: "ease-in-out",
-                        animationIterationCount: "infinite",
-                        animationDelay: `${-(idx * 0.4)}s`,
-                        willChange: "transform",
+                        background: `radial-gradient(circle at 50% 56%,
+                          ${halo.tube} 0%,
+                          ${halo.core} 12%,
+                          ${halo.mid} 26%,
+                          ${halo.wide} 44%,
+                          transparent 66%)`,
+                        filter: "blur(16px)",
+                        mixBlendMode: "normal",
+                      }}
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="absolute -inset-10 rounded-full pointer-events-none opacity-65"
+                      style={{
+                        background: `radial-gradient(circle at 50% 60%, ${halo.wide} 0%, transparent 70%)`,
+                        filter: "blur(22px)",
+                        mixBlendMode: "normal",
+                      }}
+                    />
+
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        router.push(o.href);
+                      }}
+                      className="relative grid place-items-center rounded-full select-none w-full h-full"
+                      style={{
+                        touchAction: "manipulation",
+                        background:
+                          "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.10), transparent 46%)," +
+                          "radial-gradient(circle at 55% 70%, rgba(255,255,255,0.06), transparent 52%)," +
+                          "linear-gradient(to bottom, rgba(0,0,0,0.90), rgba(0,0,0,0.98))",
+                        border: "1px solid rgba(0,0,0,0.82)",
+                        boxShadow:
+                          `0 0 0 1px rgba(0,0,0,0.78),
+                           0 20px 70px rgba(0,0,0,0.62),
+                           0 0 56px ${halo.shadow},
+                           0 0 24px ${halo.mid}`,
+                        backdropFilter: "none",
                       }}
                     >
-                      <div
-                        aria-hidden="true"
-                        className="absolute -inset-6 rounded-full pointer-events-none opacity-90 sm:opacity-100"
-                        style={{
-                          background: `radial-gradient(circle at 50% 56%,
-                            ${halo.tube} 0%,
-                            ${halo.core} 12%,
-                            ${halo.mid} 26%,
-                            ${halo.wide} 44%,
-                            transparent 66%)`,
-                          filter: "blur(16px)",
-                          mixBlendMode: "normal",
-                        }}
-                      />
-                      <div
-                        aria-hidden="true"
-                        className="absolute -inset-10 rounded-full pointer-events-none opacity-70"
-                        style={{
-                          background: `radial-gradient(circle at 50% 60%, ${halo.wide} 0%, transparent 70%)`,
-                          filter: "blur(22px)",
-                          mixBlendMode: "normal",
-                        }}
-                      />
+                      <span className="absolute inset-[10px] rounded-full pointer-events-none" style={{ boxShadow: ringGold }} />
+                      <span className="absolute inset-[18px] rounded-full pointer-events-none" style={{ boxShadow: ringDark }} />
 
-                      <button
-                        type="button"
-                        onClick={() => router.push(o.href)}
-                        className="relative grid place-items-center rounded-full select-none w-full h-full"
-                        style={{
-                          touchAction: "manipulation",
-                          background:
-                            "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.10), transparent 46%)," +
-                            "radial-gradient(circle at 55% 70%, rgba(255,255,255,0.06), transparent 52%)," +
-                            "linear-gradient(to bottom, rgba(0,0,0,0.90), rgba(0,0,0,0.98))",
-                          border: "1px solid rgba(0,0,0,0.82)",
-                          boxShadow:
-                            `0 0 0 1px rgba(0,0,0,0.78),
-                             0 20px 70px rgba(0,0,0,0.62),
-                             0 0 56px ${halo.shadow},
-                             0 0 24px ${halo.mid}`,
-                          backdropFilter: "none",
-                        }}
-                      >
-                        <span className="absolute inset-[10px] rounded-full pointer-events-none" style={{ boxShadow: ringGold }} />
-                        <span className="absolute inset-[18px] rounded-full pointer-events-none" style={{ boxShadow: ringDark }} />
-
-                        <div className="text-center px-4">
-                          <div
-                            className={[
-                              "text-transparent bg-clip-text font-extrabold tracking-wide",
-                              isShop ? "text-[18px] sm:text-[20px]" : "text-[14px] sm:text-[15px]",
-                              gradientClass(o.gradient),
-                              "drop-shadow-[0_10px_22px_rgba(0,0,0,0.60)]",
-                            ].join(" ")}
-                          >
-                            {o.label}
-                          </div>
-
-                          <div className="mt-1 text-[11px] font-semibold text-[var(--brand-gold)] drop-shadow-[0_10px_22px_rgba(0,0,0,0.65)]">
-                            {isShop ? "Jump in" : "Click to open"}
-                          </div>
+                      <div className="text-center px-4">
+                        <div
+                          className={[
+                            "text-transparent bg-clip-text font-extrabold tracking-wide",
+                            labelClass,
+                            gradientClass(o.gradient),
+                            "drop-shadow-[0_10px_22px_rgba(0,0,0,0.60)]",
+                          ].join(" ")}
+                        >
+                          {o.label}
                         </div>
-                      </button>
-                    </div>
+
+                        <div className="mt-1 text-[11px] font-semibold text-[var(--brand-gold)] drop-shadow-[0_10px_22px_rgba(0,0,0,0.65)]">
+                          {isShop ? "Jump in" : "Click to open"}
+                        </div>
+                      </div>
+                    </button>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
