@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { ExternalLink } from "lucide-react";
 
 type Orb = {
   id: string;
@@ -17,27 +15,84 @@ type Orb = {
   drift: { dx: number; dy: number; dur: number; delay: number };
 };
 
-type Puff = {
-  id: string;
-  x: number;
-  y: number;
-  t: number;
-  tone: "gold" | "emerald";
-};
+function haloForGradient(g: Orb["gradient"]) {
+  return g === "goldToEmerald"
+    ? {
+        // gold→emerald text => emerald halo
+        tube: "rgba(209,255,235,0.20)",
+        core: "rgba(16,185,129,0.90)",
+        mid: "rgba(16,185,129,0.52)",
+        wide: "rgba(16,185,129,0.20)",
+        shadow: "rgba(16,185,129,0.52)",
+      }
+    : {
+        // emerald→gold text => stronger gold halo (less washed)
+        tube: "rgba(255,255,255,0.20)",
+        core: "rgba(255,244,200,0.90)",
+        mid: "rgba(245,215,122,0.92)",
+        wide: "rgba(212,175,55,0.34)",
+        shadow: "rgba(245,215,122,0.86)",
+      };
+}
 
-function clamp(n: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, n));
+function gradientClass(g: Orb["gradient"]) {
+  return g === "goldToEmerald"
+    ? "bg-gradient-to-r from-[var(--brand-gold)] via-[#F5D77A] to-emerald-300"
+    : "bg-gradient-to-r from-emerald-300 via-[#F5D77A] to-[var(--brand-gold)]";
 }
 
 export default function ConstellationHero() {
   const router = useRouter();
 
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
+  const wrapRef = useRef<HTMLElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const lastXY = useRef({ x: 50, y: 45 });
 
-  const [mouse, setMouse] = useState({ x: 0, y: 0 });
-  const [puffs, setPuffs] = useState<Puff[]>([]);
-  const lastHoverPuffAt = useRef(0);
+  // ✅ Mouse-only spotlight: no React state, no re-rendering, and ignores touch scrolling.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    const onMove = (e: PointerEvent) => {
+      // ignore touch (scroll) + pen; only mouse
+      if (e.pointerType !== "mouse") return;
+
+      const r = el.getBoundingClientRect();
+      const px = ((e.clientX - r.left) / r.width) * 100;
+      const py = ((e.clientY - r.top) / r.height) * 100;
+
+      lastXY.current = {
+        x: Math.max(0, Math.min(100, px)),
+        y: Math.max(0, Math.min(100, py)),
+      };
+
+      if (rafRef.current) return;
+      rafRef.current = window.requestAnimationFrame(() => {
+        rafRef.current = null;
+        el.style.setProperty("--mx", `${lastXY.current.x}%`);
+        el.style.setProperty("--my", `${lastXY.current.y}%`);
+      });
+    };
+
+    const onLeave = () => {
+      el.style.setProperty("--mx", `50%`);
+      el.style.setProperty("--my", `45%`);
+    };
+
+    el.addEventListener("pointermove", onMove, { passive: true });
+    el.addEventListener("pointerleave", onLeave, { passive: true });
+
+    // init
+    el.style.setProperty("--mx", `50%`);
+    el.style.setProperty("--my", `45%`);
+
+    return () => {
+      el.removeEventListener("pointermove", onMove as any);
+      el.removeEventListener("pointerleave", onLeave as any);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, []);
 
   const orbs: Orb[] = useMemo(() => {
     const cats = [
@@ -62,7 +117,7 @@ export default function ConstellationHero() {
       { x: 56, y: 78 },
     ];
 
-    // “move around more” amplitudes
+    // Irregular wander amplitudes / durations
     const driftTable = [
       { dx: 34, dy: -28, dur: 11.2 },
       { dx: -30, dy: 24, dur: 12.6 },
@@ -85,91 +140,32 @@ export default function ConstellationHero() {
         x: layout[i]?.x ?? 50,
         y: layout[i]?.y ?? 50,
         gradient,
-        drift: {
-          dx: d.dx,
-          dy: d.dy,
-          dur: d.dur,
-          // negative delays de-sync immediately (more “natural”)
-          delay: -(i * 0.65),
-        },
+        // negative delays = instant de-sync
+        drift: { dx: d.dx, dy: d.dy, dur: d.dur, delay: -(i * 0.65) },
       };
     });
   }, []);
 
-  function onPointerMove(e: React.PointerEvent) {
-    const el = wrapRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
-    const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
-    setMouse({ x: clamp(nx, -1, 1), y: clamp(ny, -1, 1) });
-  }
-
-  function onPointerLeave() {
-    setMouse({ x: 0, y: 0 });
-  }
-
-  function spawnPuffAt(x: number, y: number, tone: Puff["tone"], lifetimeMs: number) {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const puff: Puff = { id, x, y, t: Date.now(), tone };
-    setPuffs((cur) => [...cur, puff].slice(-18));
-    window.setTimeout(() => setPuffs((cur) => cur.filter((p) => p.id !== id)), lifetimeMs);
-  }
-
-  function onPanelPointerMove(e: React.PointerEvent) {
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const now = Date.now();
-    if (now - lastHoverPuffAt.current < 95) return;
-    lastHoverPuffAt.current = now;
-
-    const r = panel.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-
-    const tone: Puff["tone"] = Math.random() > 0.5 ? "gold" : "emerald";
-    spawnPuffAt(x, y, tone, 640);
-  }
-
-  const gradientClass = (g: Orb["gradient"]) =>
-    g === "goldToEmerald"
-      ? "bg-gradient-to-r from-[var(--brand-gold)] via-[#F5D77A] to-emerald-300"
-      : "bg-gradient-to-r from-emerald-300 via-[#F5D77A] to-[var(--brand-gold)]";
-
-  function haloForGradient(g: Orb["gradient"]) {
-    return g === "goldToEmerald"
-      ? {
-          // gold→emerald text => emerald halo
-          tube: "rgba(209,255,235,0.22)",
-          core: "rgba(16,185,129,0.92)",
-          mid: "rgba(16,185,129,0.55)",
-          wide: "rgba(16,185,129,0.22)",
-          shadow: "rgba(16,185,129,0.55)",
-        }
-      : {
-          // emerald→gold text => stronger GOLD halo (less washed)
-          tube: "rgba(255,255,255,0.22)",
-          core: "rgba(255,244,200,0.92)",
-          mid: "rgba(245,215,122,0.92)",
-          wide: "rgba(212,175,55,0.34)",
-          shadow: "rgba(245,215,122,0.86)",
-        };
-  }
-
   return (
     <section
-      ref={wrapRef}
-      onPointerMove={onPointerMove}
-      onPointerLeave={onPointerLeave}
+      ref={(node) => {
+        wrapRef.current = node;
+      }}
       className="
         relative overflow-hidden rounded-[28px]
         border-2 border-[rgba(212,175,55,0.75)]
         bg-black
         shadow-[0_0_0_1px_rgba(0,0,0,0.75),_0_22px_70px_rgba(0,0,0,0.60),_0_0_46px_rgba(212,175,55,0.25)]
       "
+      style={
+        {
+          // spotlight vars (set by effect)
+          ["--mx" as any]: "50%",
+          ["--my" as any]: "45%",
+        } as React.CSSProperties
+      }
     >
-      {/* CSS keyframes: irregular wander + micro bob (combined feels “free floating”) */}
+      {/* ✅ Keyframes: wander + micro bob (CSS only, cheap) */}
       <style>{`
         @keyframes orbWanderA {
           0%   { transform: translate3d(0px, 0px, 0px); }
@@ -181,7 +177,6 @@ export default function ConstellationHero() {
           86%  { transform: translate3d(calc(var(--dx) * -0.95), calc(var(--dy) * 0.10), 0px); }
           100% { transform: translate3d(0px, 0px, 0px); }
         }
-
         @keyframes orbWanderB {
           0%   { transform: translate3d(0px, 0px, 0px); }
           16%  { transform: translate3d(calc(var(--dx) * -0.62), calc(var(--dy) * 0.30), 0px); }
@@ -191,7 +186,6 @@ export default function ConstellationHero() {
           82%  { transform: translate3d(calc(var(--dx) * 0.94), calc(var(--dy) * 0.40), 0px); }
           100% { transform: translate3d(0px, 0px, 0px); }
         }
-
         @keyframes orbMicro {
           0%   { transform: translate3d(0px, 0px, 0px) rotate(0.001deg); }
           25%  { transform: translate3d(6px, -5px, 0px) rotate(0.001deg); }
@@ -201,7 +195,7 @@ export default function ConstellationHero() {
         }
       `}</style>
 
-      {/* Ambient background */}
+      {/* Background */}
       <div
         className="absolute inset-0"
         aria-hidden="true"
@@ -213,52 +207,20 @@ export default function ConstellationHero() {
         }}
       />
 
-      {/* Cursor spotlight */}
-      <motion.div
-        aria-hidden="true"
+      {/* ✅ Mouse spotlight (cheap, no React state) */}
+      <div
         className="absolute inset-0 opacity-[0.60]"
-        animate={{ x: mouse.x * 14, y: mouse.y * 12 }}
-        transition={{ type: "spring", stiffness: 70, damping: 18 }}
+        aria-hidden="true"
         style={{
           background:
-            "radial-gradient(540px 420px at 50% 45%, rgba(245,215,122,0.16), transparent 60%)," +
-            "radial-gradient(600px 440px at 55% 52%, rgba(16,185,129,0.14), transparent 62%)",
+            "radial-gradient(560px 430px at var(--mx) var(--my), rgba(245,215,122,0.16), transparent 62%)," +
+            "radial-gradient(640px 460px at calc(var(--mx) + 4%) calc(var(--my) + 7%), rgba(16,185,129,0.14), transparent 64%)",
         }}
       />
 
-      {/* Puffs */}
-      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        {puffs.map((p) => (
-          <motion.div
-            key={p.id}
-            className="absolute"
-            style={{ left: p.x, top: p.y }}
-            initial={{ opacity: 0, scale: 0.55, x: -10, y: -8, filter: "blur(10px)" }}
-            animate={{
-              opacity: [0, 0.18, 0],
-              scale: [0.6, 1.05, 1.55],
-              x: [-10, -26],
-              y: [-8, -44],
-              filter: ["blur(10px)", "blur(14px)", "blur(18px)"],
-            }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-          >
-            <div
-              className="h-16 w-16 rounded-full"
-              style={{
-                background:
-                  p.tone === "gold"
-                    ? "radial-gradient(circle at 30% 30%, rgba(245,215,122,0.38), transparent 62%)"
-                    : "radial-gradient(circle at 30% 30%, rgba(16,185,129,0.34), transparent 62%)",
-              }}
-            />
-          </motion.div>
-        ))}
-      </div>
-
       <div className="relative px-5 py-8 sm:px-10 sm:py-12 lg:px-12 lg:py-14">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-start">
-          {/* Left copy */}
+          {/* Left */}
           <div className="max-w-xl">
             <p
               className="
@@ -286,59 +248,56 @@ export default function ConstellationHero() {
               Everything is backed by third-party COAs and clear potency labeling.
             </p>
 
-            {/* CTAs */}
-           <div className="mt-7 flex flex-col gap-3">
+            {/* CTAs (your preferred stacked layout) */}
+            <div className="mt-7 flex flex-col gap-3">
+              <button
+                onClick={() => router.push("/products")}
+                className="
+                  inline-flex items-center justify-center
+                  rounded-full px-5 py-2.5
+                  font-extrabold text-black
+                  bg-[var(--brand-gold)]
+                  border border-black/70
+                  shadow-[0_18px_44px_rgba(212,175,55,0.45)]
+                  hover:brightness-105 active:brightness-95
+                  transition
+                  w-fit
+                "
+                style={{ touchAction: "manipulation" }}
+              >
+                Shop all products
+              </button>
 
-  {/* Shop button — updated to match pill size */}
-  <button
-    onClick={() => router.push("/products")}
-    className="
-      inline-flex items-center justify-center
-      rounded-full px-5 py-2.5
-      font-extrabold text-black
-      bg-[var(--brand-gold)]
-      border border-black/70
-      shadow-[0_18px_44px_rgba(212,175,55,0.45)]
-      hover:brightness-105 active:brightness-95
-      transition
-      w-fit
-    "
-  >
-    Shop all products
-  </button>
-
-  <Link
-  href="/coa"
-  className="
-    inline-flex items-center justify-center
-    rounded-full px-5 py-2.5
-    border-2 border-[rgba(212,175,55,0.80)]
-    bg-black/85
-    shadow-[0_0_0_1px_rgba(0,0,0,0.65),_0_14px_34px_rgba(0,0,0,0.45),_0_0_34px_rgba(212,175,55,0.26)]
-    hover:brightness-110 active:brightness-95
-    transition
-    w-fit
-  "
->
-  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-gold)] via-[#F5D77A] to-emerald-300 font-extrabold tracking-wide">
-    View COA (Certificate of Analysis)
-  </span>
-</Link>
-
-</div>
+              <Link
+                href="/coa"
+                className="
+                  inline-flex items-center justify-center
+                  rounded-full px-5 py-2.5
+                  border-2 border-[rgba(212,175,55,0.80)]
+                  bg-black/85
+                  shadow-[0_0_0_1px_rgba(0,0,0,0.65),_0_14px_34px_rgba(0,0,0,0.45),_0_0_34px_rgba(212,175,55,0.26)]
+                  hover:brightness-110 active:brightness-95
+                  transition
+                  w-fit
+                "
+                style={{ touchAction: "manipulation" }}
+              >
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--brand-gold)] via-[#F5D77A] to-emerald-300 font-extrabold tracking-wide">
+                  View COA (Certificate of Analysis)
+                </span>
+              </Link>
+            </div>
           </div>
 
           {/* Right constellation */}
-          <div
-            ref={panelRef}
-            onPointerMove={onPanelPointerMove}
-            className="relative min-h-[380px] sm:min-h-[440px] lg:min-h-[500px]"
-          >
+          <div className="relative min-h-[380px] sm:min-h-[440px] lg:min-h-[500px]">
+            {/* plate — reduce blur on mobile to avoid Safari scroll gaps */}
             <div
               className="
                 absolute inset-0 rounded-[24px]
                 border border-[rgba(212,175,55,0.35)]
-                bg-black/20 backdrop-blur-[10px]
+                bg-black/25
+                sm:bg-black/20 sm:backdrop-blur-[10px]
                 shadow-[inset_0_0_0_1px_rgba(0,0,0,0.75)]
               "
             />
@@ -346,7 +305,6 @@ export default function ConstellationHero() {
             {orbs.map((o, idx) => {
               const isShop = o.id === "shop";
               const halo = haloForGradient(o.gradient);
-              const tone: Puff["tone"] = idx % 2 === 0 ? "gold" : "emerald";
 
               const ringGold =
                 "inset 0 0 0 1px rgba(212,175,55,0.60), inset 0 0 26px rgba(212,175,55,0.16)";
@@ -366,7 +324,7 @@ export default function ConstellationHero() {
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  {/* Wander (big irregular path) */}
+                  {/* Wander */}
                   <div
                     style={{
                       width: "100%",
@@ -381,7 +339,7 @@ export default function ConstellationHero() {
                       willChange: "transform",
                     }}
                   >
-                    {/* Micro drift (small bob) */}
+                    {/* Micro */}
                     <div
                       style={{
                         width: "100%",
@@ -394,12 +352,10 @@ export default function ConstellationHero() {
                         willChange: "transform",
                       }}
                     >
-                      {/* tighter neon halo */}
-                      <motion.div
+                      {/* halo (keep, but avoid mix-blend on mobile) */}
+                      <div
                         aria-hidden="true"
-                        className="absolute -inset-6 rounded-full pointer-events-none"
-                        animate={{ opacity: [0.92, 1, 0.92], scale: [0.99, 1.03, 0.99] }}
-                        transition={{ duration: 3.1 + idx * 0.12, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute -inset-6 rounded-full pointer-events-none opacity-90 sm:opacity-100"
                         style={{
                           background: `radial-gradient(circle at 50% 56%,
                             ${halo.tube} 0%,
@@ -408,33 +364,26 @@ export default function ConstellationHero() {
                             ${halo.wide} 44%,
                             transparent 66%)`,
                           filter: "blur(16px)",
-                          mixBlendMode: "screen",
+                          // blend only on larger screens
+                          mixBlendMode: "normal",
                         }}
                       />
-
                       <div
                         aria-hidden="true"
-                        className="absolute -inset-10 rounded-full pointer-events-none"
+                        className="absolute -inset-10 rounded-full pointer-events-none opacity-70"
                         style={{
                           background: `radial-gradient(circle at 50% 60%, ${halo.wide} 0%, transparent 70%)`,
                           filter: "blur(22px)",
-                          opacity: 0.7,
-                          mixBlendMode: "screen",
+                          mixBlendMode: "normal",
                         }}
                       />
 
                       <button
                         type="button"
-                        onPointerDown={(e) => {
-                          const panel = panelRef.current;
-                          if (panel) {
-                            const r = panel.getBoundingClientRect();
-                            spawnPuffAt(e.clientX - r.left, e.clientY - r.top, tone, 780);
-                          }
-                          router.push(o.href);
-                        }}
+                        onClick={() => router.push(o.href)}
                         className="relative grid place-items-center rounded-full select-none w-full h-full"
                         style={{
+                          touchAction: "manipulation",
                           background:
                             "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.10), transparent 46%)," +
                             "radial-gradient(circle at 55% 70%, rgba(255,255,255,0.06), transparent 52%)," +
@@ -445,7 +394,8 @@ export default function ConstellationHero() {
                              0 20px 70px rgba(0,0,0,0.62),
                              0 0 56px ${halo.shadow},
                              0 0 24px ${halo.mid}`,
-                          backdropFilter: "blur(10px)",
+                          // blur only on sm+ to reduce iOS repaint lag
+                          backdropFilter: "none",
                         }}
                       >
                         <span className="absolute inset-[10px] rounded-full pointer-events-none" style={{ boxShadow: ringGold }} />
