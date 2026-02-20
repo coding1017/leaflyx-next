@@ -45,16 +45,21 @@ export default function ConstellationHero() {
   const router = useRouter();
 
   const wrapRef = useRef<HTMLElement | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const plateRef = useRef<HTMLDivElement | null>(null);
+
+  // spotlight RAF
+  const spotRafRef = useRef<number | null>(null);
   const lastXY = useRef({ x: 50, y: 45 });
 
-  // ✅ Mouse-only spotlight: no React state, no re-rendering, and ignores touch scrolling.
+  // anchor refs (the absolute wrapper that positions each orb at x/y)
+  const orbAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // ✅ Mouse-only spotlight: no React state, ignores touch scrolling.
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
 
     const onMove = (e: PointerEvent) => {
-      // ignore touch (scroll) + pen; only mouse
       if (e.pointerType !== "mouse") return;
 
       const r = el.getBoundingClientRect();
@@ -66,9 +71,9 @@ export default function ConstellationHero() {
         y: Math.max(0, Math.min(100, py)),
       };
 
-      if (rafRef.current) return;
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = null;
+      if (spotRafRef.current) return;
+      spotRafRef.current = window.requestAnimationFrame(() => {
+        spotRafRef.current = null;
         el.style.setProperty("--mx", `${lastXY.current.x}%`);
         el.style.setProperty("--my", `${lastXY.current.y}%`);
       });
@@ -89,32 +94,36 @@ export default function ConstellationHero() {
     return () => {
       el.removeEventListener("pointermove", onMove as any);
       el.removeEventListener("pointerleave", onLeave as any);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
+      if (spotRafRef.current) cancelAnimationFrame(spotRafRef.current);
+      spotRafRef.current = null;
     };
   }, []);
 
   const orbs: Orb[] = useMemo(() => {
     const cats = [
-      { id: "shop", label: "Shop", href: "/products", size: 180 },
-      { id: "flower", label: "Flower", href: "/category/flower", size: 140 },
-      { id: "smalls", label: "Smalls", href: "/category/smalls", size: 120 },
-      { id: "vapes", label: "Vapes", href: "/category/vapes", size: 125 },
-      { id: "edibles", label: "Edibles", href: "/category/edibles", size: 132 },
-      { id: "beverages", label: "Beverages", href: "/category/beverages", size: 118 },
-      { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", size: 132 },
-      { id: "conc", label: "Concentrates", href: "/category/concentrates", size: 140 },
+      { id: "shop", label: "Shop", href: "/products", size: 150 },
+      { id: "flower", label: "Flower", href: "/category/flower", size: 118 },
+      { id: "smalls", label: "Smalls", href: "/category/smalls", size: 105 },
+      { id: "vapes", label: "Vapes", href: "/category/vapes", size: 110 },
+      { id: "edibles", label: "Edibles", href: "/category/edibles", size: 115 },
+
+      // ✅ start beverages farther bottom-left so it's less likely to get buried
+      { id: "beverages", label: "Beverages", href: "/category/beverages", size: 102 },
+
+      { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", size: 115 },
+      { id: "conc", label: "Concentrates", href: "/category/concentrates", size: 118 },
     ];
 
+    // NOTE: only changed beverages default position to the open pocket.
     const layout = [
-      { x: 26, y: 56 },
-      { x: 18, y: 28 },
-      { x: 50, y: 24 },
-      { x: 82, y: 30 },
-      { x: 64, y: 54 },
-      { x: 40, y: 78 },
-      { x: 78, y: 74 },
-      { x: 56, y: 78 },
+      { x: 26, y: 56 }, // shop
+      { x: 18, y: 28 }, // flower
+      { x: 50, y: 24 }, // smalls
+      { x: 82, y: 30 }, // vapes
+      { x: 64, y: 54 }, // edibles
+      { x: 30, y: 86 }, // beverages ✅ moved down-left
+      { x: 78, y: 74 }, // pre
+      { x: 56, y: 78 }, // conc
     ];
 
     // Irregular wander amplitudes / durations
@@ -140,11 +149,111 @@ export default function ConstellationHero() {
         x: layout[i]?.x ?? 50,
         y: layout[i]?.y ?? 50,
         gradient,
-        // negative delays = instant de-sync
         drift: { dx: d.dx, dy: d.dy, dur: d.dur, delay: -(i * 0.65) },
       };
     });
   }, []);
+
+  // ✅ Non-overlap relaxation (one-time / resize) — preserves your CSS movement & visuals
+  useEffect(() => {
+    const plate = plateRef.current;
+    if (!plate) return;
+
+    let raf: number | null = null;
+
+    const relaxLayout = () => {
+      const pr = plate.getBoundingClientRect();
+      const w = pr.width;
+      const h = pr.height;
+
+      // collect current % positions from style (orbs[] base)
+      const nodes = orbs
+        .map((o) => {
+          const el = orbAnchorRefs.current[o.id];
+          if (!el) return null;
+          return {
+            id: o.id,
+            size: o.size,
+            r: o.size / 2,
+            // start from base % layout
+            x: (o.x / 100) * w,
+            y: (o.y / 100) * h,
+            el,
+          };
+        })
+        .filter(Boolean) as Array<{ id: string; size: number; r: number; x: number; y: number; el: HTMLDivElement }>;
+
+      if (nodes.length === 0) return;
+
+      // keep inside plate
+      const pad = 14;
+      const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+
+      // iterative separation (cheap; only 8 orbs)
+      const iters = 34;
+      const gap = 10; // desired gap between orbs
+
+      for (let k = 0; k < iters; k++) {
+        let moved = false;
+
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i];
+            const b = nodes[j];
+
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const minDist = a.r + b.r + gap;
+
+            if (dist < minDist) {
+              const nx = dx / dist;
+              const ny = dy / dist;
+              const push = (minDist - dist) * 0.52; // softness factor
+
+              // push both away
+              a.x -= nx * push;
+              a.y -= ny * push;
+              b.x += nx * push;
+              b.y += ny * push;
+              moved = true;
+            }
+          }
+        }
+
+        // keep inside bounds each pass
+        for (const n of nodes) {
+          n.x = clamp(n.x, n.r + pad, w - n.r - pad);
+          n.y = clamp(n.y, n.r + pad, h - n.r - pad);
+        }
+
+        if (!moved) break;
+      }
+
+      // write back as % offsets via CSS vars so animations remain untouched
+      for (const n of nodes) {
+        const px = (n.x / w) * 100;
+        const py = (n.y / h) * 100;
+        n.el.style.left = `${px}%`;
+        n.el.style.top = `${py}%`;
+      }
+    };
+
+    // run after paint so layout is stable
+    raf = window.requestAnimationFrame(relaxLayout);
+
+    const onResize = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = window.requestAnimationFrame(relaxLayout);
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (raf) cancelAnimationFrame(raf);
+      raf = null;
+    };
+  }, [orbs]);
 
   return (
     <section
@@ -159,13 +268,11 @@ export default function ConstellationHero() {
       "
       style={
         {
-          // spotlight vars (set by effect)
           ["--mx" as any]: "50%",
           ["--my" as any]: "45%",
         } as React.CSSProperties
       }
     >
-      {/* ✅ Keyframes: wander + micro bob (CSS only, cheap) */}
       <style>{`
         @keyframes orbWanderA {
           0%   { transform: translate3d(0px, 0px, 0px); }
@@ -207,7 +314,7 @@ export default function ConstellationHero() {
         }}
       />
 
-      {/* ✅ Mouse spotlight (cheap, no React state) */}
+      {/* Mouse spotlight */}
       <div
         className="absolute inset-0 opacity-[0.60]"
         aria-hidden="true"
@@ -248,7 +355,6 @@ export default function ConstellationHero() {
               Everything is backed by third-party COAs and clear potency labeling.
             </p>
 
-            {/* CTAs (your preferred stacked layout) */}
             <div className="mt-7 flex flex-col gap-3">
               <button
                 onClick={() => router.push("/products")}
@@ -291,8 +397,8 @@ export default function ConstellationHero() {
 
           {/* Right constellation */}
           <div className="relative min-h-[380px] sm:min-h-[440px] lg:min-h-[500px]">
-            {/* plate — reduce blur on mobile to avoid Safari scroll gaps */}
             <div
+              ref={plateRef}
               className="
                 absolute inset-0 rounded-[24px]
                 border border-[rgba(212,175,55,0.35)]
@@ -315,6 +421,9 @@ export default function ConstellationHero() {
               return (
                 <div
                   key={o.id}
+                  ref={(node) => {
+                    orbAnchorRefs.current[o.id] = node;
+                  }}
                   className="absolute"
                   style={{
                     left: `${o.x}%`,
@@ -324,7 +433,6 @@ export default function ConstellationHero() {
                     transform: "translate(-50%, -50%)",
                   }}
                 >
-                  {/* Wander */}
                   <div
                     style={{
                       width: "100%",
@@ -339,7 +447,6 @@ export default function ConstellationHero() {
                       willChange: "transform",
                     }}
                   >
-                    {/* Micro */}
                     <div
                       style={{
                         width: "100%",
@@ -352,7 +459,6 @@ export default function ConstellationHero() {
                         willChange: "transform",
                       }}
                     >
-                      {/* halo (keep, but avoid mix-blend on mobile) */}
                       <div
                         aria-hidden="true"
                         className="absolute -inset-6 rounded-full pointer-events-none opacity-90 sm:opacity-100"
@@ -364,7 +470,6 @@ export default function ConstellationHero() {
                             ${halo.wide} 44%,
                             transparent 66%)`,
                           filter: "blur(16px)",
-                          // blend only on larger screens
                           mixBlendMode: "normal",
                         }}
                       />
@@ -394,7 +499,6 @@ export default function ConstellationHero() {
                              0 20px 70px rgba(0,0,0,0.62),
                              0 0 56px ${halo.shadow},
                              0 0 24px ${halo.mid}`,
-                          // blur only on sm+ to reduce iOS repaint lag
                           backdropFilter: "none",
                         }}
                       >
