@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -10,7 +10,7 @@ type Orb = {
   href: string;
   x: number; // %
   y: number; // %
-  size: number; // px
+  baseSize: number; // px (design size)
   gradient: "goldToEmerald" | "emeraldToGold";
   drift: { dx: number; dy: number; dur: number; delay: number };
 };
@@ -18,7 +18,6 @@ type Orb = {
 function haloForGradient(g: Orb["gradient"]) {
   return g === "goldToEmerald"
     ? {
-        // gold→emerald text => emerald halo
         tube: "rgba(209,255,235,0.20)",
         core: "rgba(16,185,129,0.90)",
         mid: "rgba(16,185,129,0.52)",
@@ -26,7 +25,6 @@ function haloForGradient(g: Orb["gradient"]) {
         shadow: "rgba(16,185,129,0.52)",
       }
     : {
-        // emerald→gold text => stronger gold halo (less washed)
         tube: "rgba(255,255,255,0.20)",
         core: "rgba(255,244,200,0.90)",
         mid: "rgba(245,215,122,0.92)",
@@ -41,20 +39,25 @@ function gradientClass(g: Orb["gradient"]) {
     : "bg-gradient-to-r from-emerald-300 via-[#F5D77A] to-[var(--brand-gold)]";
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
 export default function ConstellationHero() {
   const router = useRouter();
 
   const wrapRef = useRef<HTMLElement | null>(null);
   const plateRef = useRef<HTMLDivElement | null>(null);
 
-  // spotlight RAF
   const spotRafRef = useRef<number | null>(null);
   const lastXY = useRef({ x: 50, y: 45 });
 
-  // anchor refs (the absolute wrapper that positions each orb at x/y)
   const orbAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // ✅ Mouse-only spotlight: no React state, ignores touch scrolling.
+  // ✅ plate size -> used to scale orb size + drift
+  const [plateSize, setPlateSize] = useState({ w: 0, h: 0 });
+
+  // Mouse-only spotlight (no React state churn)
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
@@ -66,10 +69,7 @@ export default function ConstellationHero() {
       const px = ((e.clientX - r.left) / r.width) * 100;
       const py = ((e.clientY - r.top) / r.height) * 100;
 
-      lastXY.current = {
-        x: Math.max(0, Math.min(100, px)),
-        y: Math.max(0, Math.min(100, py)),
-      };
+      lastXY.current = { x: clamp(px, 0, 100), y: clamp(py, 0, 100) };
 
       if (spotRafRef.current) return;
       spotRafRef.current = window.requestAnimationFrame(() => {
@@ -86,8 +86,6 @@ export default function ConstellationHero() {
 
     el.addEventListener("pointermove", onMove, { passive: true });
     el.addEventListener("pointerleave", onLeave, { passive: true });
-
-    // init
     el.style.setProperty("--mx", `50%`);
     el.style.setProperty("--my", `45%`);
 
@@ -99,34 +97,67 @@ export default function ConstellationHero() {
     };
   }, []);
 
+  // ✅ Observe plate size (responsive sizing)
+  useEffect(() => {
+    const plate = plateRef.current;
+    if (!plate) return;
+
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (!r) return;
+      setPlateSize({ w: r.width, h: r.height });
+    });
+    ro.observe(plate);
+
+    // init fallback
+    const br = plate.getBoundingClientRect();
+    setPlateSize({ w: br.width, h: br.height });
+
+    return () => ro.disconnect();
+  }, []);
+
+  // ✅ Scale rules:
+  // - scale based on plate min dimension
+  // - also scale drift down on smaller plates so motion doesn’t cause collisions
+  const scale = useMemo(() => {
+    const m = Math.min(plateSize.w || 0, plateSize.h || 0);
+    if (!m) return 1;
+    // 520-ish is your desktop "comfortable" plate size
+    return clamp(m / 520, 0.72, 1.0);
+  }, [plateSize.w, plateSize.h]);
+
+  const driftScale = useMemo(() => {
+    const m = Math.min(plateSize.w || 0, plateSize.h || 0);
+    if (!m) return 1;
+    // shrink drift more aggressively on small plates
+    return clamp(m / 560, 0.42, 1.0);
+  }, [plateSize.w, plateSize.h]);
+
   const orbs: Orb[] = useMemo(() => {
     const cats = [
-      { id: "shop", label: "Shop", href: "/products", size: 150 },
-      { id: "flower", label: "Flower", href: "/category/flower", size: 118 },
-      { id: "smalls", label: "Smalls", href: "/category/smalls", size: 105 },
-      { id: "vapes", label: "Vapes", href: "/category/vapes", size: 110 },
-      { id: "edibles", label: "Edibles", href: "/category/edibles", size: 115 },
-
-      // ✅ start beverages farther bottom-left so it's less likely to get buried
-      { id: "beverages", label: "Beverages", href: "/category/beverages", size: 102 },
-
-      { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", size: 115 },
-      { id: "conc", label: "Concentrates", href: "/category/concentrates", size: 118 },
+      { id: "shop", label: "Shop", href: "/products", baseSize: 150 },
+      { id: "flower", label: "Flower", href: "/category/flower", baseSize: 118 },
+      { id: "smalls", label: "Smalls", href: "/category/smalls", baseSize: 105 },
+      { id: "vapes", label: "Vapes", href: "/category/vapes", baseSize: 110 },
+      { id: "edibles", label: "Edibles", href: "/category/edibles", baseSize: 115 },
+      { id: "beverages", label: "Beverages", href: "/category/beverages", baseSize: 102 },
+      { id: "pre", label: "Pre-rolls", href: "/category/pre-rolls", baseSize: 115 },
+      { id: "conc", label: "Concentrates", href: "/category/concentrates", baseSize: 118 },
     ];
 
-    // NOTE: only changed beverages default position to the open pocket.
+    // Base layout (beverages already in the open pocket)
     const layout = [
-      { x: 26, y: 56 }, // shop
-      { x: 18, y: 28 }, // flower
-      { x: 50, y: 24 }, // smalls
-      { x: 82, y: 30 }, // vapes
-      { x: 64, y: 54 }, // edibles
-      { x: 30, y: 86 }, // beverages ✅ moved down-left
-      { x: 78, y: 74 }, // pre
-      { x: 56, y: 78 }, // conc
+      { x: 26, y: 56 },
+      { x: 18, y: 28 },
+      { x: 50, y: 24 },
+      { x: 82, y: 30 },
+      { x: 64, y: 54 },
+      { x: 30, y: 86 },
+      { x: 78, y: 74 },
+      { x: 56, y: 78 },
     ];
 
-    // Irregular wander amplitudes / durations
+    // Base drift (gets multiplied by driftScale)
     const driftTable = [
       { dx: 34, dy: -28, dur: 11.2 },
       { dx: -30, dy: 24, dur: 12.6 },
@@ -141,20 +172,26 @@ export default function ConstellationHero() {
     return cats.map((c, i) => {
       const gradient = i % 2 === 0 ? "goldToEmerald" : "emeraldToGold";
       const d = driftTable[i % driftTable.length];
+
       return {
         id: c.id,
         label: c.label,
         href: c.href,
-        size: c.size,
+        baseSize: c.baseSize,
         x: layout[i]?.x ?? 50,
         y: layout[i]?.y ?? 50,
         gradient,
-        drift: { dx: d.dx, dy: d.dy, dur: d.dur, delay: -(i * 0.65) },
+        drift: {
+          dx: d.dx * driftScale,
+          dy: d.dy * driftScale,
+          dur: d.dur,
+          delay: -(i * 0.65),
+        },
       };
     });
-  }, []);
+  }, [driftScale]);
 
-  // ✅ Non-overlap relaxation (one-time / resize) — preserves your CSS movement & visuals
+  // ✅ Non-overlap relaxation that accounts for drift range (so they don’t collide while moving)
   useEffect(() => {
     const plate = plateRef.current;
     if (!plate) return;
@@ -165,33 +202,56 @@ export default function ConstellationHero() {
       const pr = plate.getBoundingClientRect();
       const w = pr.width;
       const h = pr.height;
+      if (!w || !h) return;
 
-      // collect current % positions from style (orbs[] base)
+      const pad = 14;
+
       const nodes = orbs
         .map((o) => {
           const el = orbAnchorRefs.current[o.id];
           if (!el) return null;
+
+          const size = Math.round(o.baseSize * scale);
+          const r = size / 2;
+
+          // ✅ Effective radius includes wander range so animations don’t overlap
+          const wander = Math.max(Math.abs(o.drift.dx), Math.abs(o.drift.dy));
+          const effR = r + wander * 0.62 + 10;
+
           return {
             id: o.id,
-            size: o.size,
-            r: o.size / 2,
-            // start from base % layout
+            size,
+            r,
+            effR,
             x: (o.x / 100) * w,
             y: (o.y / 100) * h,
             el,
           };
         })
-        .filter(Boolean) as Array<{ id: string; size: number; r: number; x: number; y: number; el: HTMLDivElement }>;
+        .filter(Boolean) as Array<{
+        id: string;
+        size: number;
+        r: number;
+        effR: number;
+        x: number;
+        y: number;
+        el: HTMLDivElement;
+      }>;
 
-      if (nodes.length === 0) return;
+      if (!nodes.length) return;
 
-      // keep inside plate
-      const pad = 14;
-      const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+      const clampXY = (n: typeof nodes[number]) => {
+        n.x = clamp(n.x, n.effR + pad, w - n.effR - pad);
+        n.y = clamp(n.y, n.effR + pad, h - n.effR - pad);
+      };
 
-      // iterative separation (cheap; only 8 orbs)
-      const iters = 34;
-      const gap = 10; // desired gap between orbs
+      // Desired separation gap (scales slightly with plate)
+      const baseGap = 10;
+      const gap = baseGap + (1 - scale) * 14; // more gap when smaller screen
+      const iters = 48;
+
+      // initial clamp
+      nodes.forEach(clampXY);
 
       for (let k = 0; k < iters; k++) {
         let moved = false;
@@ -204,56 +264,58 @@ export default function ConstellationHero() {
             const dx = b.x - a.x;
             const dy = b.y - a.y;
             const dist = Math.hypot(dx, dy) || 0.0001;
-            const minDist = a.r + b.r + gap;
+
+            // ✅ Use effective radii (includes wander)
+            const minDist = a.effR + b.effR + gap;
 
             if (dist < minDist) {
               const nx = dx / dist;
               const ny = dy / dist;
-              const push = (minDist - dist) * 0.52; // softness factor
+              const push = (minDist - dist) * 0.55;
 
-              // push both away
               a.x -= nx * push;
               a.y -= ny * push;
               b.x += nx * push;
               b.y += ny * push;
+
               moved = true;
+
+              clampXY(a);
+              clampXY(b);
             }
           }
-        }
-
-        // keep inside bounds each pass
-        for (const n of nodes) {
-          n.x = clamp(n.x, n.r + pad, w - n.r - pad);
-          n.y = clamp(n.y, n.r + pad, h - n.r - pad);
         }
 
         if (!moved) break;
       }
 
-      // write back as % offsets via CSS vars so animations remain untouched
+      // Apply layout + per-orb size as inline styles (no re-render required)
       for (const n of nodes) {
         const px = (n.x / w) * 100;
         const py = (n.y / h) * 100;
+
         n.el.style.left = `${px}%`;
         n.el.style.top = `${py}%`;
+        n.el.style.width = `${n.size}px`;
+        n.el.style.height = `${n.size}px`;
       }
     };
 
-    // run after paint so layout is stable
     raf = window.requestAnimationFrame(relaxLayout);
 
     const onResize = () => {
       if (raf) cancelAnimationFrame(raf);
       raf = window.requestAnimationFrame(relaxLayout);
     };
-    window.addEventListener("resize", onResize);
+
+    window.addEventListener("resize", onResize, { passive: true });
 
     return () => {
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onResize as any);
       if (raf) cancelAnimationFrame(raf);
       raf = null;
     };
-  }, [orbs]);
+  }, [orbs, scale]);
 
   return (
     <section
@@ -415,8 +477,10 @@ export default function ConstellationHero() {
               const ringGold =
                 "inset 0 0 0 1px rgba(212,175,55,0.60), inset 0 0 26px rgba(212,175,55,0.16)";
               const ringDark = "inset 0 0 0 2px rgba(0,0,0,0.78)";
-
               const wanderName = idx % 2 === 0 ? "orbWanderA" : "orbWanderB";
+
+              // initial size (will be overridden by relaxLayout inline sizing)
+              const size = Math.round(o.baseSize * scale);
 
               return (
                 <div
@@ -428,8 +492,8 @@ export default function ConstellationHero() {
                   style={{
                     left: `${o.x}%`,
                     top: `${o.y}%`,
-                    width: o.size,
-                    height: o.size,
+                    width: size,
+                    height: size,
                     transform: "translate(-50%, -50%)",
                   }}
                 >
