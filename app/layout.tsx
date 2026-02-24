@@ -8,7 +8,6 @@ import AgeGate from "../components/AgeGate";
 import Providers from "./providers";
 import { ToastProvider } from "../components/ToastContext";
 import CompareBar from "@/components/compare/CompareBar";
-import CheckoutUpgradeBanner from "@/components/CheckoutUpgradeBanner";
 
 
 const inter = Inter({ subsets: ["latin"] });
@@ -50,7 +49,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ToastProvider>
           <Providers>
             <Header />
-            <CheckoutUpgradeBanner />
             {/* Keep content + footer above the background */}
             <div className="relative z-10">
               <main>{children}</main>

@@ -18,7 +18,7 @@ import MiniCart from "@/components/MiniCart";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-
+import CheckoutUpgradeBanner from "@/components/CheckoutUpgradeBanner";
 import HeaderTunerPanel from "./header/HeaderTunerPanel";
 import { useHeaderLayoutTuner } from "./header/useHeaderLayoutTuner";
 
@@ -721,6 +721,7 @@ export function Header() {
         </div>
 
         <AnnouncementBar />
+        <CheckoutUpgradeBanner />
       </header>
     </>
   );
